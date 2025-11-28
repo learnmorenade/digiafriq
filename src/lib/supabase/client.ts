@@ -10,9 +10,18 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
-    autoRefreshToken: true,
+    autoRefreshToken: false, // Disable auto-refresh to avoid network issues
     persistSession: true,
-    detectSessionInUrl: true
+    detectSessionInUrl: true,
+    flowType: 'pkce'
+  },
+  global: {
+    headers: {
+      'x-client-info': 'digiafriq-web'
+    }
+  },
+  db: {
+    schema: 'public'
   }
 })
 
@@ -46,3 +55,5 @@ export const getUserWithProfile = async () => {
   const profile = await getUserProfile(user.id)
   return { ...user, profile }
 }
+
+// Removed session recovery on tab focus to avoid network issues

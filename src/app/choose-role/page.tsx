@@ -61,8 +61,10 @@ const ChooseRolePage = () => {
       await new Promise(resolve => setTimeout(resolve, 500))
       
       // Redirect to appropriate dashboard
+      // For learners, redirect to membership page since they likely don't have membership yet
+      // For affiliates, redirect to main dashboard
       const dashboardPath = selectedRole === 'learner' 
-        ? '/dashboard/learner' 
+        ? '/dashboard/learner/membership' 
         : '/dashboard/affiliate'
       
       console.log(`🔄 Redirecting to: ${dashboardPath}`)

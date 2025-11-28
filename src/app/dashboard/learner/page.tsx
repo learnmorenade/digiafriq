@@ -4,7 +4,8 @@ import {
   BookOpen, 
   PlayCircle, 
   CheckCircle,
-  Loader2
+  Loader2,
+  RotateCw
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -13,7 +14,17 @@ import AffiliatePromoSection from '@/components/dashboard/AffiliatePromoSection'
 import { useLearnerData } from '@/lib/hooks/useLearnerData'
 
 const LearnerDashboard = () => {
-  const { stats, recentCourses, profile, loading, error } = useLearnerData()
+  const { stats, recentCourses, profile, loading, error, refresh } = useLearnerData()
+  const [isRefreshing, setIsRefreshing] = React.useState(false)
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true)
+    try {
+      await refresh()
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
 
 
   const statsCards = [
@@ -73,9 +84,19 @@ const LearnerDashboard = () => {
   return (
     <div className="p-6">
       {/* Dashboard Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Learning Dashboard</h1>
-        <p className="text-gray-600">Track your progress and continue your learning journey</p>
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Learning Dashboard</h1>
+          <p className="text-gray-600">Track your progress and continue your learning journey</p>
+        </div>
+        <button
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          className="p-2 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50"
+          title="Refresh data"
+        >
+          <RotateCw className={`w-5 h-5 text-gray-600 ${isRefreshing ? 'animate-spin' : ''}`} />
+        </button>
       </div>
 
       {/* Stats Grid */}

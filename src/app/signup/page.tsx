@@ -8,6 +8,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/lib/supabase/auth'
+import { supabase } from '@/lib/supabase/client'
 
 interface PasswordRequirement {
   text: string
@@ -28,13 +29,35 @@ const SignupPage = () => {
     accountType: '' as 'learner' | 'affiliate' | ''
   })
 
-  // Country data with codes and flag images from CDN
+  // Country data with codes and flag images from CDN - All payment-supported countries
   const countries = [
+    // West Africa
     { name: 'Ghana', code: '+233', flag: 'https://flagcdn.com/w20/gh.png', iso: 'GH' },
     { name: 'Nigeria', code: '+234', flag: 'https://flagcdn.com/w20/ng.png', iso: 'NG' },
+    { name: 'Benin', code: '+229', flag: 'https://flagcdn.com/w20/bj.png', iso: 'BJ' },
+    { name: 'Burkina Faso', code: '+226', flag: 'https://flagcdn.com/w20/bf.png', iso: 'BF' },
+    { name: "Côte d'Ivoire", code: '+225', flag: 'https://flagcdn.com/w20/ci.png', iso: 'CI' },
+    { name: 'Guinea-Bissau', code: '+245', flag: 'https://flagcdn.com/w20/gw.png', iso: 'GW' },
+    { name: 'Mali', code: '+223', flag: 'https://flagcdn.com/w20/ml.png', iso: 'ML' },
+    { name: 'Niger', code: '+227', flag: 'https://flagcdn.com/w20/ne.png', iso: 'NE' },
+    { name: 'Senegal', code: '+221', flag: 'https://flagcdn.com/w20/sn.png', iso: 'SN' },
+    { name: 'Togo', code: '+228', flag: 'https://flagcdn.com/w20/tg.png', iso: 'TG' },
+    
+    // Central Africa
+    { name: 'Cameroon', code: '+237', flag: 'https://flagcdn.com/w20/cm.png', iso: 'CM' },
+    { name: 'Central African Republic', code: '+236', flag: 'https://flagcdn.com/w20/cf.png', iso: 'CF' },
+    { name: 'Chad', code: '+235', flag: 'https://flagcdn.com/w20/td.png', iso: 'TD' },
+    { name: 'Republic of the Congo', code: '+242', flag: 'https://flagcdn.com/w20/cg.png', iso: 'CG' },
+    { name: 'Congo', code: '+242', flag: 'https://flagcdn.com/w20/cd.png', iso: 'CD' },
+    { name: 'Equatorial Guinea', code: '+240', flag: 'https://flagcdn.com/w20/gq.png', iso: 'GQ' },
+    { name: 'Gabon', code: '+241', flag: 'https://flagcdn.com/w20/ga.png', iso: 'GA' },
+    
+    // East Africa
     { name: 'Kenya', code: '+254', flag: 'https://flagcdn.com/w20/ke.png', iso: 'KE' },
     { name: 'South Africa', code: '+27', flag: 'https://flagcdn.com/w20/za.png', iso: 'ZA' },
-    { name: "Côte d'Ivoire", code: '+225', flag: 'https://flagcdn.com/w20/ci.png', iso: 'CI' }
+    
+    // North America
+    { name: 'United States', code: '+1', flag: 'https://flagcdn.com/w20/us.png', iso: 'US' },
   ]
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
@@ -185,8 +208,47 @@ const SignupPage = () => {
       
       console.log('✅ Supabase signup successful!')
       
-      // Step 2: Wait a moment for profile creation to complete
-      await new Promise(resolve => setTimeout(resolve, 1500))
+      // Step 2: Wait for profile creation to complete
+      // The auth state change listener will create the profile
+      // We need to wait for it to be created before proceeding
+      let profileCreated = false
+      let attempts = 0
+      const maxAttempts = 30 // 30 attempts × 200ms = 6 seconds
+      
+      while (!profileCreated && attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 200))
+        
+        // Check if profile exists
+        try {
+          const { data: { user } } = await supabase.auth.getUser()
+          if (!user) {
+            console.error('❌ User not found')
+            break
+          }
+          
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('id', user.id)
+            .single()
+          
+          if (profile) {
+            console.log('✅ Profile created successfully')
+            profileCreated = true
+            break
+          }
+        } catch (e) {
+          // Profile not found yet, continue waiting
+        }
+        
+        attempts++
+      }
+      
+      if (!profileCreated) {
+        console.error('❌ Profile creation timeout')
+        setError('Profile creation failed. Please try signing up again.')
+        return
+      }
       
       // Step 3: Add the selected role to available_roles
       console.log(`➕ Adding ${formData.accountType} to available roles...`)
@@ -208,9 +270,13 @@ const SignupPage = () => {
       setError('')
       const dashboardRoute = formData.accountType === 'affiliate' 
         ? '/dashboard/affiliate' 
-        : '/dashboard/learner'
+        : '/dashboard/learner/membership'
       
-      console.log('🎉 Redirecting to dashboard:', dashboardRoute)
+      console.log(`🎉 Redirecting to dashboard: ${dashboardRoute}`)
+      
+      // Small delay to ensure auth state is fully updated before redirect
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
       router.push(dashboardRoute)
       
     } catch (err: any) {

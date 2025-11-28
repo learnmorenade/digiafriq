@@ -3,8 +3,10 @@
 import Link from "next/link"
 import Image from "next/image"
 import { useState } from "react"
-import { Menu, X } from "lucide-react"
+import { Menu, X, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useAuth } from "@/lib/supabase/auth"
+import { useRouter } from "next/navigation"
 
 const navigation = [
   { name: "How it Works", href: "/how-it-works" },
@@ -17,6 +19,18 @@ const navigation = [
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const { user, signOut } = useAuth()
+  const router = useRouter()
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true)
+    const { error } = await signOut()
+    if (!error) {
+      router.push('/')
+    }
+    setIsLoggingOut(false)
+  }
 
   return (
     <header className="bg-white">
@@ -51,19 +65,32 @@ export function Header() {
 
         {/* Right: Buttons */}
         <div className="hidden lg:flex items-center gap-4">
-          <Button
-            variant="outline"
-            className="border-[#ed874a] text-[#4A0D66] hover:bg-[#ed874a] hover:text-white"
-            asChild
-          >
-            <Link href="/login">Log In</Link>
-          </Button>
-          <Button
-            className="bg-[#ed874a] text-white hover:bg-[#d76f32]"
-            asChild
-          >
-            <Link href="/signup">Join Now</Link>
-          </Button>
+          {user ? (
+            <Button
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+              className="bg-red-600 text-white hover:bg-red-700 flex items-center gap-2"
+            >
+              <LogOut className="w-4 h-4" />
+              {isLoggingOut ? 'Logging out...' : 'Log Out'}
+            </Button>
+          ) : (
+            <>
+              <Button
+                variant="outline"
+                className="border-[#ed874a] text-[#4A0D66] hover:bg-[#ed874a] hover:text-white"
+                asChild
+              >
+                <Link href="/login">Log In</Link>
+              </Button>
+              <Button
+                className="bg-[#ed874a] text-white hover:bg-[#d76f32]"
+                asChild
+              >
+                <Link href="/signup">Join Now</Link>
+              </Button>
+            </>
+          )}
         </div>
 
         {/* Mobile menu button */}
@@ -90,15 +117,28 @@ export function Header() {
                 {item.name}
               </Link>
             ))}
-            <Link href="/login" className="text-gray-700 text-sm hover:text-[#ed874a]">
-              Log In
-            </Link>
-            <Button
-              className="bg-[#ed874a] text-white w-full hover:bg-[#3a0952]"
-              asChild
-            >
-              <Link href="/signup">Join Now</Link>
-            </Button>
+            {user ? (
+              <Button
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                className="bg-red-600 text-white w-full hover:bg-red-700 flex items-center justify-center gap-2"
+              >
+                <LogOut className="w-4 h-4" />
+                {isLoggingOut ? 'Logging out...' : 'Log Out'}
+              </Button>
+            ) : (
+              <>
+                <Link href="/login" className="text-gray-700 text-sm hover:text-[#ed874a]">
+                  Log In
+                </Link>
+                <Button
+                  className="bg-[#ed874a] text-white w-full hover:bg-[#3a0952]"
+                  asChild
+                >
+                  <Link href="/signup">Join Now</Link>
+                </Button>
+              </>
+            )}
           </div>
         </div>
       )}

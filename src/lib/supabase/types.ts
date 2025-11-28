@@ -423,6 +423,10 @@ export type Database = {
           available_roles: ('learner' | 'affiliate' | 'admin')[]
           phone: string | null
           country: string | null
+          learner_has_paid: boolean | null
+          learner_payment_date: string | null
+          learner_payment_amount: number | null
+          learner_payment_reference: string | null
           created_at: string
           updated_at: string
         }
@@ -436,6 +440,10 @@ export type Database = {
           available_roles?: ('learner' | 'affiliate' | 'admin')[]
           phone?: string | null
           country?: string | null
+          learner_has_paid?: boolean | null
+          learner_payment_date?: string | null
+          learner_payment_amount?: number | null
+          learner_payment_reference?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -449,6 +457,10 @@ export type Database = {
           available_roles?: ('learner' | 'affiliate' | 'admin')[]
           phone?: string | null
           country?: string | null
+          learner_has_paid?: boolean | null
+          learner_payment_date?: string | null
+          learner_payment_amount?: number | null
+          learner_payment_reference?: string | null
           created_at?: string
           updated_at?: string
         }

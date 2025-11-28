@@ -27,6 +27,7 @@ import { Input } from '@/components/ui/input'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useAuth } from '@/lib/supabase/auth'
+import MembershipActivatedBanner from '@/components/MembershipActivatedBanner'
 
 interface SidebarItem {
   title: string
@@ -481,6 +482,9 @@ const LearnerDashboardLayout = ({ children, title = "Dashboard" }: LearnerDashbo
           onClick={() => setSidebarOpen(false)}
         />
       )}
+      
+      {/* Membership Activation Banner */}
+      <MembershipActivatedBanner />
     </div>
   )
 }

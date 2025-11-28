@@ -39,6 +39,8 @@ export function useAffiliatePaymentStatus(): AffiliatePaymentStatus {
       }
 
       try {
+        console.log('🔍 Fetching affiliate payment status for user:', user.id);
+        
         const { data, error } = await supabase
           .from('affiliate_profiles')
           .select('has_paid, payment_date, payment_amount, payment_reference')
@@ -51,16 +53,13 @@ export function useAffiliatePaymentStatus(): AffiliatePaymentStatus {
               payment_reference: string | null; 
             } | null; 
             error: any 
-          }; // Use maybeSingle() instead of single() to handle no records gracefully
+          };
 
         // If error and it's not a "no rows" error, log it
         if (error && error.code !== 'PGRST116') {
-          console.error('Error fetching affiliate payment status:', {
-            error,
-            code: error.code,
-            message: error.message,
-            details: error.details,
-            hint: error.hint,
+          console.warn('⚠️ Error fetching affiliate payment status:', {
+            code: error?.code,
+            message: error?.message,
           });
           setStatus({
             hasPaid: false,
@@ -68,13 +67,14 @@ export function useAffiliatePaymentStatus(): AffiliatePaymentStatus {
             paymentAmount: null,
             paymentReference: null,
             loading: false,
-            error: error.message || 'Unknown error',
+            error: error?.message || 'Unknown error',
           });
           return;
         }
 
         // If no data (user doesn't have affiliate profile), treat as unpaid
         if (!data) {
+          console.log('ℹ️ No affiliate profile found for user, treating as unpaid');
           setStatus({
             hasPaid: false,
             paymentDate: null,
@@ -87,6 +87,10 @@ export function useAffiliatePaymentStatus(): AffiliatePaymentStatus {
         }
 
         // User has affiliate profile, return payment status
+        console.log('✅ Affiliate payment status fetched:', {
+          hasPaid: data.has_paid,
+          paymentDate: data.payment_date,
+        });
         setStatus({
           hasPaid: data.has_paid || false,
           paymentDate: data.payment_date || null,
@@ -96,7 +100,7 @@ export function useAffiliatePaymentStatus(): AffiliatePaymentStatus {
           error: null,
         });
       } catch (err) {
-        console.error('Unexpected error fetching payment status:', err);
+        console.warn('⚠️ Exception fetching payment status:', err);
         setStatus({
           hasPaid: false,
           paymentDate: null,

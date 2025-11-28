@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { useLearnerPaymentStatus } from '@/lib/hooks/useLearnerPaymentStatus';
+import { useMembershipStatus } from '@/lib/hooks/useMembershipStatus';
 import LearnerDashboardLayout from '@/components/dashboard/LearnerDashboardLayout';
 import { Loader2 } from 'lucide-react';
 
@@ -13,7 +13,7 @@ export default function LearnerLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { hasPaid, loading } = useLearnerPaymentStatus();
+  const { hasLearnerMembership, loading } = useMembershipStatus();
 
   // Membership and checkout pages should always be accessible
   const isMembershipPage = pathname === '/dashboard/learner/membership';
@@ -21,11 +21,11 @@ export default function LearnerLayout({
   const isPaymentRelatedPage = isMembershipPage || isCheckoutPage;
 
   useEffect(() => {
-    // If user hasn't paid and is not on payment-related pages, redirect to membership
-    if (!loading && !hasPaid && !isPaymentRelatedPage) {
+    // If user doesn't have learner membership and is not on payment-related pages, redirect to membership
+    if (!loading && !hasLearnerMembership && !isPaymentRelatedPage) {
       router.push('/dashboard/learner/membership');
     }
-  }, [hasPaid, loading, isPaymentRelatedPage, router]);
+  }, [hasLearnerMembership, loading, isPaymentRelatedPage, router]);
 
   // Show loading state within dashboard layout
   if (loading) {
@@ -41,9 +41,9 @@ export default function LearnerLayout({
     );
   }
 
-  // If user hasn't paid and tries to access non-payment pages, they'll be redirected by useEffect
+  // If user doesn't have learner membership and tries to access non-payment pages, they'll be redirected by useEffect
   // But we still render payment-related pages or show loading during redirect
-  if (!hasPaid && !isPaymentRelatedPage) {
+  if (!hasLearnerMembership && !isPaymentRelatedPage) {
     return (
       <LearnerDashboardLayout>
         <div className="flex items-center justify-center min-h-[60vh]">

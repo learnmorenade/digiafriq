@@ -35,9 +35,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('🔍 Fetching profile for user ID:', userId)
       
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select()
         .eq('id', userId)
         .single()
 
@@ -45,12 +45,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (error.code === 'PGRST116') {
           console.log('ℹ️ No profile found for user (this is normal for new users):', userId)
         } else {
-          console.error('❌ Error fetching profile:', {
-            error,
+          console.warn('⚠️ Error fetching profile:', {
             code: error.code,
-            message: error.message,
-            details: error.details,
-            hint: error.hint
+            message: error.message
           })
         }
         return null
@@ -64,59 +61,88 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  // Create profile for new user
+  // Create profile for new user with retry logic
   const createProfile = async (user: User, fullName?: string) => {
-    try {
-      // Get full_name from user metadata if not provided
-      const name = fullName || user.user_metadata?.full_name || null
-      
-      console.log('👤 Creating profile for user:', {
-        id: user.id,
-        email: user.email,
-        full_name: name,
-        user_metadata: user.user_metadata
-      })
-      
-      const profileData = {
-        id: user.id,
-        email: user.email!,
-        full_name: name,
-        role: 'learner' as const
-      }
-      
-      console.log('📝 Profile data to insert:', profileData)
-      
-      const { data, error } = await (supabase as any)
-        .from('profiles')
-        .insert([profileData])
-        .select()
-        .single()
-
-      if (error) {
-        console.error('❌ Error creating profile:', {
-          error,
-          code: error.code,
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          profileData
+    const maxRetries = 3
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        // Get full_name from user metadata if not provided
+        const name = fullName || user.user_metadata?.full_name || null
+        
+        console.log(`👤 Creating profile (attempt ${attempt}/${maxRetries}) for user:`, {
+          id: user.id,
+          email: user.email,
+          full_name: name
         })
+        
+        const profileData = {
+          id: user.id,
+          email: user.email!,
+          full_name: name,
+          role: 'learner' as const,
+          active_role: 'learner' as const,
+          available_roles: ['learner']
+        }
+        
+        const { data, error } = await (supabase as any)
+          .from('profiles')
+          .insert([profileData])
+          .select()
+          .single()
+
+        if (error) {
+          console.warn(`⚠️ Error creating profile (attempt ${attempt}):`, {
+            code: error.code,
+            message: error.message
+          })
+          
+          // Don't retry on duplicate key errors
+          if (error.code === '23505') {
+            console.log('ℹ️ Profile already exists, fetching it instead')
+            return await fetchProfile(user.id)
+          }
+          
+          // Retry on network errors
+          if (attempt < maxRetries) {
+            console.log(`⏳ Retrying in 1 second...`)
+            await new Promise(resolve => setTimeout(resolve, 1000))
+            continue
+          }
+          
+          return null
+        }
+
+        console.log('✅ Profile created successfully:', data)
+        return data
+      } catch (error) {
+        console.warn(`⚠️ Exception creating profile (attempt ${attempt}):`, error)
+        
+        // Retry on network errors
+        if (attempt < maxRetries) {
+          console.log(`⏳ Retrying in 1 second...`)
+          await new Promise(resolve => setTimeout(resolve, 1000))
+          continue
+        }
+        
         return null
       }
-
-      console.log('✅ Profile created successfully:', data)
-      return data
-    } catch (error) {
-      console.error('💥 Unexpected error creating profile:', error)
-      return null
     }
+    
+    return null
   }
 
   // Refresh profile data
   const refreshProfile = async () => {
     if (user) {
+      console.log('🔄 Refreshing profile for user:', user.id)
       const profileData = await fetchProfile(user.id)
-      setProfile(profileData)
+      if (profileData) {
+        console.log('✅ Profile refreshed:', profileData.id)
+        setProfile(profileData)
+      } else {
+        console.warn('⚠️ Profile refresh returned null, keeping existing profile state')
+      }
     }
   }
 
@@ -166,18 +192,58 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  // Sign in function
+  // Sign in function with retry logic
   const signIn = async (email: string, password: string) => {
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      })
+    const maxRetries = 3
+    let lastError: AuthError | null = null
 
-      return { error }
-    } catch (error) {
-      return { error: error as AuthError }
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`🔄 Attempting sign-in (attempt ${attempt}/${maxRetries}) for:`, email)
+        console.log('📋 Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL)
+        
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password
+        })
+
+        if (error) {
+          console.error(`❌ Sign-in error (attempt ${attempt}):`, {
+            message: error.message,
+            status: error.status,
+            name: error.name
+          })
+          lastError = error
+          
+          // Don't retry on auth errors (invalid credentials)
+          if (error.status === 400 || error.message.includes('Invalid')) {
+            return { error }
+          }
+          
+          // Retry on network errors
+          if (attempt < maxRetries) {
+            console.log(`⏳ Retrying in 1 second...`)
+            await new Promise(resolve => setTimeout(resolve, 1000))
+            continue
+          }
+        } else {
+          console.log('✅ Sign-in successful')
+          return { error: null }
+        }
+      } catch (error) {
+        console.error(`💥 Sign-in exception (attempt ${attempt}):`, error)
+        lastError = error as AuthError
+        
+        // Retry on network errors
+        if (attempt < maxRetries) {
+          console.log(`⏳ Retrying in 1 second...`)
+          await new Promise(resolve => setTimeout(resolve, 1000))
+          continue
+        }
+      }
     }
+
+    return { error: lastError }
   }
 
   // Sign out function
@@ -339,11 +405,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(session)
         setUser(session?.user ?? null)
 
+        let profileData: Profile | null = null
+        
         if (session?.user) {
           console.log('👤 User session found, managing profile...')
+          console.log('📋 Session details:', {
+            userId: session.user.id,
+            email: session.user.email,
+            hasAccessToken: !!session.access_token
+          })
           
-          // Fetch or create profile
-          let profileData = await fetchProfile(session.user.id)
+          // Try to fetch existing profile first
+          console.log('🔍 Attempting to fetch existing profile...')
+          profileData = await fetchProfile(session.user.id)
+          
+          // If we have a profile in state and fetch failed, use the existing one
+          if (!profileData && profile) {
+            console.log('✅ Using existing profile from state:', profile.id)
+            profileData = profile
+          }
           
           if (!profileData) {
             console.log('🔄 No profile found, creating one now...')
@@ -373,6 +453,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               email: session.user.email!,
               full_name: session.user.user_metadata?.full_name || null,
               role: defaultRole as 'learner' | 'affiliate',
+              active_role: defaultRole as 'learner' | 'affiliate',
+              available_roles: [defaultRole as 'learner' | 'affiliate'],
               country: userData.country || null,
               phone: userData.phoneNumber || null
             }
@@ -386,13 +468,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               .single()
             
             if (error) {
-              console.error('❌ Error creating profile:', error)
-              console.error('Error details:', {
-                code: error.code,
-                message: error.message,
-                details: error.details,
-                hint: error.hint
+              console.warn('⚠️ Error creating profile:', {
+                code: error?.code,
+                message: error?.message,
+                details: error?.details,
+                hint: error?.hint
               })
+              
+              // Try to fetch the profile in case it was created despite the error
+              console.log('🔄 Attempting to fetch profile after error...')
+              const { data: existingProfile, error: fetchError } = await (supabase as any)
+                .from('profiles')
+                .select('*')
+                .eq('id', session.user.id)
+                .single()
+              
+              if (existingProfile) {
+                console.log('✅ Profile exists despite error, using it:', existingProfile)
+                profileData = existingProfile
+              } else {
+                console.error('❌ Profile still not found after error:', fetchError)
+                profileData = null
+              }
             } else {
               console.log('✅ Profile created successfully:', data)
               profileData = data
@@ -402,15 +499,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
           }
           
-          setProfile(profileData)
-          console.log('📊 Profile state updated:', profileData ? 'Profile set' : 'No profile')
+          if (profileData) {
+            setProfile(profileData)
+            console.log('📊 Profile state updated:', `Profile set: ${profileData.id}`)
+          } else {
+            console.warn('⚠️ No profile data available, profile state not updated')
+          }
         } else {
           console.log('🚪 No user session, clearing profile')
           setProfile(null)
         }
 
         setLoading(false)
-        console.log('✅ Auth state change processing complete')
+        console.log('✅ Auth state change processing complete', {
+          hasProfile: !!profileData,
+          profileId: profileData?.id,
+          profileRole: profileData?.role
+        })
       }
     )
 

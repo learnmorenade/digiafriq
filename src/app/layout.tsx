@@ -5,6 +5,8 @@ import "@/styles/nprogress-custom.css"
 import { ConditionalLayout } from "@/components/ConditionalLayout"
 import { AuthProvider } from '@/lib/supabase/auth'
 import TopLoader from '@/components/TopLoader'
+import { Toaster } from 'sonner'
+import { PageRefreshHandler } from '@/components/PageRefreshHandler'
 
 export const metadata: Metadata = {
   title: {
@@ -35,8 +37,10 @@ export default function RootLayout({
       <body className="antialiased min-h-screen flex flex-col">
         <TopLoader />
         <AuthProvider>
+          <PageRefreshHandler />
           <ConditionalLayout>{children}</ConditionalLayout>
         </AuthProvider>
+        <Toaster richColors position="top-right" />
       </body>
     </html>
   )
