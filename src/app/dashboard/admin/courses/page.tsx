@@ -1,5 +1,5 @@
 "use client"
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, Suspense } from 'react'
 import { 
   BookOpen, 
   Search, 
@@ -364,7 +364,13 @@ const CoursesManagement = () => {
   }
 
   return (
-    <AdminDashboardLayout title="Course Management">
+    <Suspense fallback={
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-8 h-8 animate-spin text-[#ed874a]" />
+        <span className="ml-3 text-gray-600">Loading...</span>
+      </div>
+    }>
+      <AdminDashboardLayout title="Course Management">
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
         <Card>
@@ -918,6 +924,7 @@ const CoursesManagement = () => {
         </div>
       )}
     </AdminDashboardLayout>
+    </Suspense>
   )
 }
 

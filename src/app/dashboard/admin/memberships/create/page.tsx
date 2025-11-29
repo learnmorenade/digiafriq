@@ -1,5 +1,5 @@
 "use client"
-import React from 'react'
+import React, { Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import AdminDashboardLayout from '@/components/dashboard/AdminDashboardLayout'
 import { Button } from '@/components/ui/button'
@@ -19,7 +19,15 @@ export default function CreateMembershipPage() {
   }
 
   return (
-    <AdminDashboardLayout
+    <Suspense fallback={
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <div className="w-8 h-8 animate-spin border-2 border-[#ed874a] border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <AdminDashboardLayout
       title="Create Membership Package"
       headerAction={
         <Button onClick={handleBack} variant="outline">
@@ -33,5 +41,6 @@ export default function CreateMembershipPage() {
         onCancel={handleBack}
       />
     </AdminDashboardLayout>
+    </Suspense>
   )
 }

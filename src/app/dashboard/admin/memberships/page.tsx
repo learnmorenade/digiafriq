@@ -1,5 +1,5 @@
 "use client"
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import AdminDashboardLayout from '@/components/dashboard/AdminDashboardLayout'
 import { Button } from '@/components/ui/button'
@@ -170,7 +170,15 @@ export default function MembershipsPage() {
   }
 
   return (
-    <AdminDashboardLayout
+    <Suspense fallback={
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <div className="w-8 h-8 animate-spin border-2 border-[#ed874a] border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <AdminDashboardLayout
       title="Membership Packages"
       headerAction={
         <Button onClick={handleCreateMembership} className="bg-[#ed874a] hover:bg-[#d67635]">
@@ -425,5 +433,6 @@ export default function MembershipsPage() {
       )}
 
     </AdminDashboardLayout>
+    </Suspense>
   )
 }

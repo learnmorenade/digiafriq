@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '@/lib/supabase/auth';
@@ -265,7 +265,15 @@ export default function PaymentCallbackPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-50 flex items-center justify-center py-12 px-4">
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-50 flex items-center justify-center py-12 px-4">
+        <div className="text-center">
+          <Loader2 className="w-16 h-16 text-orange-400 animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-50 flex items-center justify-center py-12 px-4">
       <div className="max-w-md w-full">
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-orange-100 p-8">
           {renderVerificationContent()}
@@ -282,5 +290,6 @@ export default function PaymentCallbackPage() {
         </div>
       </div>
     </div>
+    </Suspense>
   );
 }

@@ -1,5 +1,5 @@
 "use client"
-import React, { useState } from 'react'
+import React, { useState, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/supabase/auth'
 import { GraduationCap, Users, Loader2 } from 'lucide-react'
@@ -77,7 +77,15 @@ const ChooseRolePage = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-[#ed874a]/5 via-white to-[#d76f32]/5 px-4 py-8">
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-[#ed874a]/5 via-white to-[#d76f32]/5 px-4 py-8">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-[#ed874a] mx-auto mb-4" />
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-[#ed874a]/5 via-white to-[#d76f32]/5 px-4 py-8">
       <div className="w-full max-w-4xl mx-auto bg-white rounded-2xl shadow-2xl border-0 p-8">
         <div className="text-center mb-8">
           <h2 className="text-2xl font-semibold text-[#4A0D66] mb-1">
@@ -184,6 +192,7 @@ const ChooseRolePage = () => {
         {error && <div className="text-red-600 text-sm text-center mt-4">{error}</div>}
       </div>
     </div>
+    </Suspense>
   )
 }
 

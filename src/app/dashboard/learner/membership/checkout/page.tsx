@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Check, CreditCard, Wallet } from 'lucide-react';
 import { useAuth } from '@/lib/supabase/auth';
@@ -453,7 +453,15 @@ export default function CheckoutPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-white py-8 px-4">
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-white py-8 px-4 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-white py-8 px-4">
       <div className="max-w-6xl mx-auto">
         {/* Back Button */}
         <button
@@ -722,5 +730,6 @@ export default function CheckoutPage() {
         </div>
       </div>
     </div>
+    </Suspense>
   );
 }

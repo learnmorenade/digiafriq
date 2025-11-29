@@ -1,5 +1,5 @@
 "use client"
-import React from 'react'
+import React, { Suspense } from 'react'
 import { 
   DollarSign, 
   TrendingUp, 
@@ -96,7 +96,15 @@ const AffiliateDashboard = () => {
   }
 
   return (
-    <div className="p-6">
+    <Suspense fallback={
+      <div className="p-6 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-[#ed874a] mx-auto mb-4" />
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <div className="p-6">
       {/* Compact Welcome Section */}
       <div className="mb-4">
         <div className="flex items-center justify-between mb-3">
@@ -352,6 +360,7 @@ const AffiliateDashboard = () => {
         </Card>
       </div>
     </div>
+    </Suspense>
   )
 }
 

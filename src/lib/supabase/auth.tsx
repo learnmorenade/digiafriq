@@ -297,13 +297,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Switch active role function
   const switchRole = async (newRole: UserRole) => {
-    if (!user) return { error: new Error('No user logged in') }
+    let currentUser = user
+    
+    // If user is null in context, try to get current session
+    if (!currentUser) {
+      console.log('🔄 User not in context for switchRole, fetching current session...')
+      const { data: { session } } = await supabase.auth.getSession()
+      currentUser = session?.user || null
+      console.log('📊 Current session user for switchRole:', {
+        hasUser: !!currentUser,
+        userId: currentUser?.id,
+        userEmail: currentUser?.email
+      })
+    }
+    
+    if (!currentUser) return { error: new Error('No user logged in') }
 
     try {
-      console.log('🔄 Switching role to:', newRole)
+      console.log('🔄 Switching role to:', newRole, 'for user:', currentUser.id)
       
       const { error } = await (supabase as any).rpc('switch_active_role', {
-        user_id: user.id,
+        user_id: currentUser.id,
         new_active_role: newRole
       })
 
@@ -325,13 +339,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Add role to user function
   const addRole = async (newRole: UserRole) => {
-    if (!user) return { error: new Error('No user logged in') }
+    let currentUser = user
+    
+    // If user is null in context, try to get current session
+    if (!currentUser) {
+      console.log('🔄 User not in context, fetching current session...')
+      const { data: { session } } = await supabase.auth.getSession()
+      currentUser = session?.user || null
+      console.log('📊 Current session user:', {
+        hasUser: !!currentUser,
+        userId: currentUser?.id,
+        userEmail: currentUser?.email
+      })
+    }
+    
+    if (!currentUser) return { error: new Error('No user logged in') }
 
     try {
-      console.log('➕ Adding role:', newRole)
+      console.log('➕ Adding role:', newRole, 'for user:', currentUser.id)
       
       const { error } = await (supabase as any).rpc('add_role_to_user', {
-        user_id: user.id,
+        user_id: currentUser.id,
         new_role: newRole
       })
 

@@ -1,5 +1,5 @@
 "use client"
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, Suspense } from 'react'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,7 +15,12 @@ interface PasswordRequirement {
   met: boolean
 }
 
-const SignupPage = () => {
+function SignupPageInner() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const redirectParam = searchParams.get('redirect')
+  const { signUp, updateProfile, addRole, switchRole } = useAuth()
+  
   const [step, setStep] = useState<'details' | 'password' | 'account-type'>('details')
   const [formData, setFormData] = useState({
     firstName: '',
@@ -65,11 +70,6 @@ const SignupPage = () => {
   const [error, setError] = useState('')
   const [showCountryDropdown, setShowCountryDropdown] = useState(false)
   const countryDropdownRef = useRef<HTMLDivElement>(null)
-
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const redirectParam = searchParams.get('redirect')
-  const { signUp, updateProfile, addRole, switchRole } = useAuth()
 
   // Password validation requirements
   const getPasswordRequirements = (password: string): PasswordRequirement[] => [
@@ -276,7 +276,6 @@ const SignupPage = () => {
       
       // Small delay to ensure auth state is fully updated before redirect
       await new Promise(resolve => setTimeout(resolve, 500))
-      
       router.push(dashboardRoute)
       
     } catch (err: any) {
@@ -323,374 +322,327 @@ const SignupPage = () => {
             priority
           />
         </div>
-        <h1 className="text-3xl font-bold text-[#4A0D66] mb-2 text-center">
-          {step === 'details' ? 'Sign up' : step === 'password' ? 'Sign up' : 'Choose your path'}
-        </h1>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">Create Account</h1>
+        <p className="text-gray-600 text-center max-w-md">
+          Join Digiafriq to learn digital skills and earn affiliate income
+        </p>
       </div>
 
+      {/* Progress Bar */}
+      <div className="w-full max-w-md mb-8">
+        <div className="flex items-center justify-between mb-2">
+          <div className={`flex items-center ${step === 'details' ? 'text-orange-600' : 'text-gray-400'}`}>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${step === 'details' ? 'bg-orange-600 text-white' : 'bg-gray-200'}`}>
+              1
+            </div>
+            <span className="ml-2 text-sm">Details</span>
+          </div>
+          <div className={`flex items-center ${step === 'password' ? 'text-orange-600' : 'text-gray-400'}`}>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${step === 'password' ? 'bg-orange-600 text-white' : 'bg-gray-200'}`}>
+              2
+            </div>
+            <span className="ml-2 text-sm">Password</span>
+          </div>
+          <div className={`flex items-center ${step === 'account-type' ? 'text-orange-600' : 'text-gray-400'}`}>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${step === 'account-type' ? 'bg-orange-600 text-white' : 'bg-gray-200'}`}>
+              3
+            </div>
+            <span className="ml-2 text-sm">Account Type</span>
+          </div>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-2">
+          <div 
+            className="bg-orange-600 h-2 rounded-full transition-all duration-300"
+            style={{ width: `${getStepProgress()}%` }}
+          ></div>
+        </div>
+      </div>
 
-      <Card className={`w-full ${step === 'account-type' ? 'max-w-4xl' : 'max-w-md'} mx-auto rounded-2xl shadow-2xl border-0 bg-white`}>
-        <CardHeader className="pb-2" />
-        <CardContent className="flex flex-col gap-6 pt-2">
-          {step === 'details' ? (
-            <form className="flex flex-col gap-4" onSubmit={handleDetailsSubmit}>
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center pb-4">
+          <h2 className="text-xl font-semibold text-gray-900">
+            {step === 'details' && 'Personal Information'}
+            {step === 'password' && 'Create Password'}
+            {step === 'account-type' && 'Choose Account Type'}
+          </h2>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {step === 'details' && (
+            <form onSubmit={handleDetailsSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="firstName" className="font-semibold text-[#4A0D66] text-left">
-                    First name
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    First Name
                   </label>
                   <Input
-                    id="firstName"
-                    name="firstName"
                     type="text"
-                    placeholder="Your first name"
+                    name="firstName"
                     value={formData.firstName}
                     onChange={handleInputChange}
+                    placeholder="John"
+                    className="w-full"
                     required
-                    className="bg-[#ed874a]/5 border-[#ed874a]/20 text-gray-900 focus:ring-[#ed874a] focus:border-[#ed874a]"
                   />
                 </div>
                 <div>
-                  <label htmlFor="lastName" className="font-semibold text-[#4A0D66] text-left">
-                    Last name
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Last Name
                   </label>
                   <Input
-                    id="lastName"
-                    name="lastName"
                     type="text"
-                    placeholder="Your last name"
+                    name="lastName"
                     value={formData.lastName}
                     onChange={handleInputChange}
+                    placeholder="Doe"
+                    className="w-full"
                     required
-                    className="bg-[#ed874a]/5 border-[#ed874a]/20 text-gray-900 focus:ring-[#ed874a] focus:border-[#ed874a]"
                   />
                 </div>
               </div>
 
               <div>
-                <label htmlFor="email" className="font-semibold text-[#4A0D66] text-left">
-                  Email
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Email Address
                 </label>
                 <Input
-                  id="email"
-                  name="email"
                   type="email"
-                  placeholder="Your email address"
+                  name="email"
                   value={formData.email}
                   onChange={handleInputChange}
+                  placeholder="john.doe@example.com"
+                  className="w-full"
                   required
-                  className="bg-[#ed874a]/5 border-[#ed874a]/20 text-gray-900 focus:ring-[#ed874a] focus:border-[#ed874a]"
                 />
               </div>
 
               <div>
-                <label htmlFor="country" className="font-semibold text-[#4A0D66] text-left">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Country
                 </label>
-                <div className="relative" ref={countryDropdownRef}>
-                  <button
-                    type="button"
-                    onClick={() => setShowCountryDropdown(!showCountryDropdown)}
-                    className="w-full p-2 bg-[#ed874a]/5 border border-[#ed874a]/20 text-gray-900 focus:ring-[#ed874a] focus:border-[#ed874a] rounded-md flex items-center justify-between"
-                  >
-                    <div className="flex items-center gap-2">
-                      {formData.country ? (
-                        <>
-                          <img 
-                            src={countries.find(c => c.name === formData.country)?.flag} 
-                            alt={formData.country}
-                            className="w-5 h-4 object-cover rounded-sm"
-                          />
-                          <span>{formData.country} ({countries.find(c => c.name === formData.country)?.code})</span>
-                        </>
-                      ) : (
-                        <span className="text-gray-500">Select your country</span>
-                      )}
-                    </div>
-                    <ChevronDown className="w-4 h-4 text-gray-400" />
-                  </button>
-                  
-                  {showCountryDropdown && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border border-[#ed874a]/20 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                      {countries.map((country) => (
-                        <button
-                          key={country.name}
-                          type="button"
-                          onClick={() => {
-                            handleCountryChange({ target: { value: country.name } } as any)
-                            setShowCountryDropdown(false)
-                          }}
-                          className="w-full p-2 text-left hover:bg-[#ed874a]/5 flex items-center gap-2 border-b border-gray-100 last:border-b-0"
-                        >
-                          <img 
-                            src={country.flag} 
-                            alt={country.name}
-                            className="w-5 h-4 object-cover rounded-sm"
-                          />
-                          <span>{country.name} ({country.code})</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                <select
+                  name="country"
+                  value={formData.country}
+                  onChange={handleCountryChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  required
+                >
+                  {countries.map(country => (
+                    <option key={country.name} value={country.name}>
+                      {country.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
-                <label htmlFor="phoneNumber" className="font-semibold text-[#4A0D66] text-left">
-                  Phone number
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Phone Number
                 </label>
                 <div className="flex">
-                  <div className="flex items-center px-3 bg-[#ed874a]/10 border border-r-0 border-[#ed874a]/20 rounded-l-md text-[#4A0D66]">
-                    <span className="text-sm font-medium min-w-[60px] text-center">
-                      {formData.countryCode}
-                    </span>
+                  <div className="flex items-center px-3 bg-gray-100 border border-r-0 border-gray-300 rounded-l-md">
+                    <span className="text-sm text-gray-600">{formData.countryCode}</span>
                   </div>
                   <Input
-                    id="phoneNumber"
-                    name="phoneNumber"
                     type="tel"
-                    placeholder="Your phone number"
+                    name="phoneNumber"
                     value={formData.phoneNumber}
                     onChange={handleInputChange}
+                    placeholder="123 456 7890"
+                    className="flex-1 rounded-l-none"
                     required
-                    className="flex-1 bg-[#ed874a]/5 border-[#ed874a]/20 text-gray-900 focus:ring-[#ed874a] focus:border-[#ed874a] rounded-l-none border-l-0"
                   />
                 </div>
               </div>
 
-
-              <Button
-                type="submit"
-                className="w-full bg-[#ed874a] hover:bg-[#d76f32] text-white text-lg py-3 mt-2 font-semibold rounded-xl"
-              >
-                Continue
+              <Button type="submit" className="w-full bg-orange-600 hover:bg-orange-700">
+                Continue to Password
               </Button>
-
-              <div className="flex items-center gap-2 my-2">
-                <div className="flex-1 h-px bg-[#ed874a]/20" />
-                <span className="text-[#ed874a]/60 text-sm">OR</span>
-                <div className="flex-1 h-px bg-[#ed874a]/20" />
-              </div>
-
-              <Button
-                type="button"
-                onClick={handleGoogleSignup}
-                className="w-full flex items-center justify-center gap-2 bg-white border-[#ed874a]/20 text-[#4A0D66] hover:bg-[#ed874a]/5 rounded-xl text-base font-semibold"
-              >
-                <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-5 h-5" /> 
-                Continue with Google
-              </Button>
-
-              <div className="text-center text-[#4A0D66] text-sm mt-4 mb-2">
-                Already have an account?{' '}
-                <Link 
-                  href={redirectParam ? `/login?redirect=${encodeURIComponent(redirectParam)}` : '/login'} 
-                  className="underline text-[#ed874a] font-semibold hover:text-[#d76f32]"
-                >
-                  Sign in
-                </Link>
-              </div>
-
-              {error && <div className="text-red-600 text-sm text-center mt-2">{error}</div>}
-
-              <div className="text-center text-xs text-gray-500 mt-4">
-                By signing up, you agree to our{' '}
-                <Link href="/legal-policies" className="text-[#ed874a] hover:underline">
-                  privacy policy
-                </Link>{' '}
-                and{' '}
-                <Link href="/legal-policies" className="text-[#ed874a] hover:underline">
-                  terms & conditions
-                </Link>
-              </div>
             </form>
-          ) : step === 'password' ? (
-            <form className="flex flex-col gap-4" onSubmit={handlePasswordSubmit}>
-              <div className="mb-4">
-                <label className="font-semibold text-[#4A0D66] text-left block mb-2">
-                  Email
-                </label>
-                <div className="text-[#4A0D66]/70 text-base">{formData.email}</div>
-              </div>
+          )}
 
+          {step === 'password' && (
+            <form onSubmit={handlePasswordSubmit} className="space-y-4">
               <div>
-                <label htmlFor="password" className="font-semibold text-[#4A0D66] text-left">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Password
                 </label>
                 <div className="relative">
                   <Input
-                    id="password"
+                    type={showPassword ? "text" : "password"}
                     name="password"
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="Create a password"
                     value={formData.password}
                     onChange={handleInputChange}
+                    placeholder="Enter your password"
+                    className="w-full pr-10"
                     required
-                    className="bg-[#ed874a]/5 border-[#ed874a]/20 text-gray-900 focus:ring-[#ed874a] focus:border-[#ed874a] pr-12"
                   />
                   <button
                     type="button"
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#ed874a]/70 hover:text-[#ed874a]"
                     onClick={() => setShowPassword(!showPassword)}
-                    tabIndex={-1}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
                   >
-                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
-                
-                {/* Password Requirements */}
-                {formData.password && (
-                  <div className="mt-2 space-y-1">
-                    {passwordRequirements.map((req, index) => (
-                      <div key={index} className="flex items-center space-x-2 text-sm">
-                        {req.met ? (
-                          <Check className="w-4 h-4 text-green-500" />
-                        ) : (
-                          <X className="w-4 h-4 text-red-500" />
-                        )}
-                        <span className={req.met ? 'text-green-600' : 'text-red-600'}>
-                          {req.text}
-                        </span>
+                <div className="mt-2 space-y-1">
+                  {passwordRequirements.map((req, index) => (
+                    <div key={index} className="flex items-center text-xs">
+                      {req.met ? (
+                        <Check className="w-3 h-3 text-green-500 mr-2" />
+                      ) : (
+                        <X className="w-3 h-3 text-red-500 mr-2" />
+                      )}
+                      <span className={req.met ? 'text-green-600' : 'text-red-600'}>
+                        {req.text}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Confirm Password
+                </label>
+                <div className="relative">
+                  <Input
+                    type={showConfirmPassword ? "text" : "password"}
+                    name="confirmPassword"
+                    value={formData.confirmPassword}
+                    onChange={handleInputChange}
+                    placeholder="Confirm your password"
+                    className="w-full pr-10"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  >
+                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                {formData.confirmPassword && (
+                  <div className="mt-1">
+                    {passwordsMatch ? (
+                      <div className="flex items-center text-xs text-green-600">
+                        <Check className="w-3 h-3 mr-2" />
+                        Passwords match
                       </div>
-                    ))}
+                    ) : (
+                      <div className="flex items-center text-xs text-red-600">
+                        <X className="w-3 h-3 mr-2" />
+                        Passwords do not match
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
 
-
-              <Button
-                type="submit"
-                className="w-full bg-[#ed874a] hover:bg-[#d76f32] text-white text-lg py-3 mt-2 font-semibold rounded-xl"
-                disabled={!isPasswordValid}
-              >
-                Continue
-              </Button>
-
-              <div className="flex items-center gap-2 my-2">
-                <div className="flex-1 h-px bg-[#ed874a]/20" />
-                <span className="text-[#ed874a]/60 text-sm">OR</span>
-                <div className="flex-1 h-px bg-[#ed874a]/20" />
-              </div>
-
-              <Button
-                type="button"
-                className="w-full flex items-center justify-center gap-2 bg-white border-[#ed874a]/20 text-[#4A0D66] hover:bg-[#ed874a]/5 rounded-xl text-base font-semibold"
-              >
-                <Mail className="w-5 h-5 mr-2" /> Continue with email code
-              </Button>
-
-              <div className="w-full flex justify-center mt-4">
-                <button
+              <div className="flex gap-3">
+                <Button
                   type="button"
+                  variant="outline"
                   onClick={handleGoBack}
-                  className="flex items-center gap-1 text-[#ed874a] hover:underline text-base"
+                  className="flex-1"
                 >
-                  <ArrowLeft className="w-4 h-4" /> Go back
-                </button>
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Back
+                </Button>
+                <Button type="submit" className="flex-1 bg-orange-600 hover:bg-orange-700">
+                  Continue
+                </Button>
               </div>
-
-              {error && <div className="text-red-600 text-sm text-center mt-2">{error}</div>}
             </form>
-          ) : (
-            <div className="flex flex-col gap-6">
-              <div className="text-center mb-2">
-                <h2 className="text-2xl font-semibold text-[#4A0D66] mb-1">
-                  How do you plan to use DigiAfriq today?
-                </h2>
-                <p className="text-[#ed874a]">
-                  Don&apos;t worry, you can switch between profiles anytime.
-                </p>
-              </div>
+          )}
 
-              {/* Options grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 px-4 max-w-4xl mx-auto">
-                {/* Learner Card */}
+          {step === 'account-type' && (
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600 text-center mb-6">
+                Choose how you'd like to use Digiafriq
+              </p>
+
+              <div className="space-y-3">
                 <button
-                  type="button"
                   onClick={() => handleAccountTypeSelect('learner')}
-                  className={`relative group w-full text-left rounded-2xl border transition-all duration-200 p-8 bg-white shadow-sm ${
+                  className={`w-full p-4 rounded-lg border-2 transition-all ${
                     formData.accountType === 'learner'
-                      ? 'border-[#ed874a] ring-2 ring-[#ed874a]/20'
-                      : 'border-[#ed874a]/20 hover:border-[#ed874a]/40 hover:shadow-md'
+                      ? 'border-orange-600 bg-orange-50'
+                      : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  {/* Radio indicator */}
-                  <span className={`absolute top-6 right-6 h-6 w-6 rounded-full border-2 ${
-                    formData.accountType === 'learner' ? 'border-[#ed874a] bg-[#ed874a]' : 'border-gray-300 bg-white'
-                  }`} />
-
-                  <div className="flex flex-col items-center text-center gap-4">
-                    <div className={`w-16 h-16 rounded-full flex items-center justify-center bg-[#ed874a]/10 text-[#ed874a]`}>
-                      <GraduationCap className="w-8 h-8" />
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                      <GraduationCap className="w-6 h-6 text-orange-600" />
                     </div>
-                    <div>
-                      <p className="text-[#4A0D66] text-lg leading-relaxed">
-                        I&apos;m a <span className="font-semibold">learner</span>, I want access to digital skills courses.
+                    <div className="flex-1 text-left">
+                      <h3 className="font-semibold text-gray-900">Learner</h3>
+                      <p className="text-sm text-gray-600">
+                        Learn digital skills and advance your career
                       </p>
                     </div>
+                    {formData.accountType === 'learner' && (
+                      <Check className="w-5 h-5 text-orange-600" />
+                    )}
                   </div>
                 </button>
 
-                {/* Affiliate Card */}
                 <button
-                  type="button"
                   onClick={() => handleAccountTypeSelect('affiliate')}
-                  className={`relative group w-full text-left rounded-2xl border transition-all duration-200 p-8 bg-white shadow-sm ${
+                  className={`w-full p-4 rounded-lg border-2 transition-all ${
                     formData.accountType === 'affiliate'
-                      ? 'border-[#ed874a] ring-2 ring-[#ed874a]/20'
-                      : 'border-[#ed874a]/20 hover:border-[#ed874a]/40 hover:shadow-md'
+                      ? 'border-orange-600 bg-orange-50'
+                      : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  {/* Radio indicator */}
-                  <span className={`absolute top-6 right-6 h-6 w-6 rounded-full border-2 ${
-                    formData.accountType === 'affiliate' ? 'border-[#ed874a] bg-[#ed874a]' : 'border-gray-300 bg-white'
-                  }`} />
-
-                  <div className="flex flex-col items-center text-center gap-4">
-                    <div className={`w-16 h-16 rounded-full flex items-center justify-center bg-[#ed874a]/10 text-[#ed874a]`}>
-                      <Users className="w-8 h-8" />
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                      <Users className="w-6 h-6 text-orange-600" />
                     </div>
-                    <div>
-                      <p className="text-[#4A0D66] text-lg leading-relaxed">
-                        I&apos;m an <span className="font-semibold">affiliate</span>, I want to earn income by promoting courses.
+                    <div className="flex-1 text-left">
+                      <h3 className="font-semibold text-gray-900">Affiliate</h3>
+                      <p className="text-sm text-gray-600">
+                        Earn 100% commission by referring others
                       </p>
                     </div>
+                    {formData.accountType === 'affiliate' && (
+                      <Check className="w-5 h-5 text-orange-600" />
+                    )}
                   </div>
                 </button>
               </div>
-              {/* Dynamic CTA */}
-              <Button
-                onClick={handleFinalSubmit}
-                disabled={!formData.accountType || loading}
-                className={`${
-                  !formData.accountType || loading
-                    ? 'w-full bg-gray-300 text-white text-lg py-3 mt-2 font-semibold rounded-xl cursor-not-allowed'
-                    : 'w-full bg-[#ed874a] hover:bg-[#d76f32] text-white text-lg py-3 mt-2 font-semibold rounded-xl'
-                }`}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                    Creating account...
-                  </>
-                ) : (
-                  formData.accountType
-                    ? `Continue as a ${formData.accountType === 'learner' ? 'learner' : 'affiliate'}`
-                    : 'Choose a profile'
-                )}
-              </Button>
 
-              <div className="w-full flex justify-center mt-2">
-                <button
+              <div className="flex gap-3 pt-4">
+                <Button
                   type="button"
+                  variant="outline"
                   onClick={handleGoBack}
-                  className="flex items-center gap-1 text-[#ed874a] hover:underline text-base"
+                  className="flex-1"
                 >
-                  <ArrowLeft className="w-4 h-4" /> Go back
-                </button>
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Back
+                </Button>
+                <Button
+                  onClick={handleFinalSubmit}
+                  disabled={!formData.accountType || loading}
+                  className="flex-1 bg-orange-600 hover:bg-orange-700"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Creating Account...
+                    </>
+                  ) : (
+                    'Create Account'
+                  )}
+                </Button>
               </div>
+            </div>
+          )}
 
-              {error && <div className="text-red-600 text-sm text-center mt-2">{error}</div>}
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-md p-3">
+              <p className="text-sm text-red-600">{error}</p>
             </div>
           )}
         </CardContent>
@@ -708,4 +660,17 @@ const SignupPage = () => {
   )
 }
 
-export default SignupPage
+export default function SignupPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-[#ed874a]/5 via-white to-[#d76f32]/5">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-[#ed874a] mx-auto mb-4" />
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <SignupPageInner />
+    </Suspense>
+  )
+}

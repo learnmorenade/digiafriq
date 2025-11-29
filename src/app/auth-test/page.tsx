@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -185,7 +185,15 @@ export default function AuthTestPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 p-8 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-[#ed874a] mx-auto mb-4" />
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-3xl font-bold text-[#ed874a] mb-2">Authentication Diagnostics</h1>
         <p className="text-gray-600 mb-6">Test your Supabase authentication setup</p>
@@ -346,5 +354,6 @@ export default function AuthTestPage() {
         </Card>
       </div>
     </div>
+    </Suspense>
   )
 }
