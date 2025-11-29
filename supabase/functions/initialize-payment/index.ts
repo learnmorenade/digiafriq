@@ -966,6 +966,7 @@ serve(async (req) => {
         membership_package_id,
         amount: finalAmount,
         currency: paymentCurrency,
+        base_currency_amount: membershipPackage.price, // USD base amount for analytics
         payment_provider: selectedProvider,
         payment_type,
         status: 'pending',
@@ -1024,13 +1025,24 @@ serve(async (req) => {
     }
 
     // Update payment record with provider reference
-    await supabase
+    const { error: updateError } = await supabase
       .from('payments')
       .update({ 
         provider_reference: paymentResponse.reference,
         authorization_url: paymentResponse.authorization_url 
       })
       .eq('id', payment.id)
+
+    if (updateError) {
+      console.error('❌ Failed to update payment record with provider reference:', updateError)
+      // Don't fail the whole process, but log the error
+    } else {
+      console.log('✅ Payment record updated with provider reference:', {
+        paymentId: payment.id,
+        providerReference: paymentResponse.reference,
+        authorizationUrl: paymentResponse.authorization_url
+      })
+    }
 
     const responseData = {
         success: true,

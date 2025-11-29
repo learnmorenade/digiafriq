@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '@/lib/supabase/auth';
@@ -23,12 +23,32 @@ export default function PaymentCallbackPage() {
   const searchParams = useSearchParams();
   const { user } = useAuth();
 
+  // Add unique instance ID for debugging
+  const [instanceId] = useState(() => Math.random().toString(36).substr(2, 9));
+  console.log('🔥 Component instance ID:', instanceId);
+
   const [verification, setVerification] = useState<PaymentVerification>({
     status: 'verifying'
   });
 
+  // Add flag to track if verification is already running
+  const verificationInProgressRef = useRef(false); // Track if verification is already running
+
   useEffect(() => {
+    console.log('🔥 useEffect triggered, instanceId:', instanceId, 'user:', !!user, 'verification.status:', verification.status);
+    
     const verifyPayment = async () => {
+      console.log('🔥 verifyPayment function called, verificationInProgressRef.current:', verificationInProgressRef.current);
+      
+      // Prevent duplicate verification calls
+      if (verificationInProgressRef.current) {
+        console.log('🔥 Verification already in progress, skipping duplicate call');
+        return;
+      }
+      
+      verificationInProgressRef.current = true; // Mark as in progress
+      console.log('🔥 Starting verification, marked as in progress');
+      
       try {
         // Get payment reference from URL params
         const reference = searchParams.get('reference');
@@ -36,6 +56,7 @@ export default function PaymentCallbackPage() {
         const paymentRef = reference || trxref;
 
         if (!paymentRef) {
+          console.log('🔥 TOAST: Showing error toast for missing reference, instanceId:', instanceId);
           setVerification({ status: 'error' });
           toast.error('No payment reference found');
           return;
@@ -72,37 +93,47 @@ export default function PaymentCallbackPage() {
 
           setVerification({
             status: 'success',
-            membershipType: membershipData?.member_type || 'learner',
-            membershipName: membershipData?.name || 'Membership',
+            membershipType: (membershipData as any)?.member_type,
+            membershipName: (membershipData as any)?.name,
             amount: data.payment.amount,
             currency: data.payment.currency,
             reference: paymentRef
           });
 
-          // Show success toast
+          console.log('🔥 TOAST: Showing success toast, instanceId:', instanceId);
           toast.success('Payment verified successfully!');
 
           // Redirect after 3 seconds
           setTimeout(() => {
-            redirectToAppropriateDashboard(membershipData?.member_type || 'learner');
+            redirectToAppropriateDashboard((membershipData as any)?.member_type || 'learner');
           }, 3000);
 
         } else {
+          console.log('🔥 TOAST: Showing failed toast, instanceId:', instanceId);
           setVerification({ status: 'failed' });
           toast.error(data.message || 'Payment verification failed');
         }
 
       } catch (error) {
+        console.log('🔥 TOAST: Showing catch error toast, instanceId:', instanceId);
         console.error('Payment verification error:', error);
         setVerification({ status: 'error' });
         toast.error('Failed to verify payment');
+      } finally {
+        // Always reset the verification progress flag
+        verificationInProgressRef.current = false;
+        console.log('🔥 Verification completed, reset progress flag');
       }
     };
 
-    if (user) {
+    // Only verify if we have a user and haven't verified yet
+    if (user && verification.status === 'verifying') {
+      console.log('🔥 About to call verifyPayment');
       verifyPayment();
+    } else {
+      console.log('🔥 Skipped verifyPayment call, user:', !!user, 'status:', verification.status);
     }
-  }, [user, searchParams]);
+  }, [user]); // Only depend on user, not searchParams
 
   const redirectToAppropriateDashboard = (membershipType: 'learner' | 'affiliate') => {
     if (membershipType === 'affiliate') {
@@ -113,6 +144,7 @@ export default function PaymentCallbackPage() {
   };
 
   const handleRetry = () => {
+    verificationInProgressRef.current = false; // Reset verification progress for retry
     window.location.reload();
   };
 
@@ -126,7 +158,7 @@ export default function PaymentCallbackPage() {
         return (
           <div className="text-center">
             <div className="flex justify-center mb-6">
-              <Loader2 className="w-16 h-16 text-blue-600 animate-spin" />
+              <Loader2 className="w-16 h-16 text-orange-400 animate-spin" />
             </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-4">
               Verifying Payment
@@ -141,13 +173,13 @@ export default function PaymentCallbackPage() {
         return (
           <div className="text-center">
             <div className="flex justify-center mb-6">
-              <CheckCircle className="w-16 h-16 text-green-600" />
+              <CheckCircle className="w-16 h-16 text-green-500" />
             </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-4">
               Payment Successful!
             </h2>
-            <div className="bg-green-50 border border-green-200 rounded-lg p-6 mb-6">
-              <h3 className="font-semibold text-green-800 mb-2">
+            <div className="bg-green-50/50 border border-green-200/70 rounded-lg p-6 mb-6">
+              <h3 className="font-semibold text-green-700 mb-2">
                 {verification.membershipName} Activated
               </h3>
               <div className="text-sm text-green-700 space-y-1">
@@ -161,9 +193,9 @@ export default function PaymentCallbackPage() {
             </p>
             <div className="flex justify-center">
               <div className="animate-pulse flex space-x-1">
-                <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                <div className="w-2 h-2 bg-orange-400 rounded-full"></div>
+                <div className="w-2 h-2 bg-orange-400 rounded-full"></div>
+                <div className="w-2 h-2 bg-orange-400 rounded-full"></div>
               </div>
             </div>
           </div>
@@ -173,7 +205,7 @@ export default function PaymentCallbackPage() {
         return (
           <div className="text-center">
             <div className="flex justify-center mb-6">
-              <XCircle className="w-16 h-16 text-red-600" />
+              <XCircle className="w-16 h-16 text-red-500" />
             </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-4">
               Payment Failed
@@ -184,7 +216,7 @@ export default function PaymentCallbackPage() {
             <div className="flex gap-4 justify-center">
               <button
                 onClick={handleRetry}
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="px-6 py-3 bg-gradient-to-r from-[#ed874a] to-orange-500 text-white rounded-lg hover:from-orange-600 hover:to-orange-600 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
               >
                 Retry Verification
               </button>
@@ -202,7 +234,7 @@ export default function PaymentCallbackPage() {
         return (
           <div className="text-center">
             <div className="flex justify-center mb-6">
-              <XCircle className="w-16 h-16 text-red-600" />
+              <XCircle className="w-16 h-16 text-red-500" />
             </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-4">
               Verification Error
@@ -213,7 +245,7 @@ export default function PaymentCallbackPage() {
             <div className="flex gap-4 justify-center">
               <button
                 onClick={handleRetry}
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="px-6 py-3 bg-gradient-to-r from-[#ed874a] to-orange-500 text-white rounded-lg hover:from-orange-600 hover:to-orange-600 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
               >
                 Try Again
               </button>
@@ -233,9 +265,9 @@ export default function PaymentCallbackPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center py-12 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-50 flex items-center justify-center py-12 px-4">
       <div className="max-w-md w-full">
-        <div className="bg-white rounded-2xl shadow-xl p-8">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-orange-100 p-8">
           {renderVerificationContent()}
         </div>
         
@@ -243,7 +275,7 @@ export default function PaymentCallbackPage() {
         <div className="text-center mt-6">
           <p className="text-sm text-gray-600">
             Need help? Contact{' '}
-            <a href="mailto:support@digiafriq.com" className="text-blue-600 hover:underline">
+            <a href="mailto:support@digiafriq.com" className="text-orange-600 hover:underline">
               support@digiafriq.com
             </a>
           </p>

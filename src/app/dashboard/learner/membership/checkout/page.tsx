@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, Check } from 'lucide-react';
+import { ArrowLeft, Check, CreditCard, Wallet } from 'lucide-react';
 import { useAuth } from '@/lib/supabase/auth';
 import { supabase } from '@/lib/supabase/client';
 import { toast } from 'sonner';
@@ -25,6 +25,7 @@ type PaymentProvider = 'paystack' | 'kora';
 interface UserProfile {
   full_name?: string;
   country?: string;
+  phone?: string;
 }
 
 // Comprehensive country-to-currency mapping
@@ -188,12 +189,12 @@ export default function CheckoutPage() {
           
           const { data, error } = await supabase
             .from('profiles')
-            .select('full_name, country')
+            .select('full_name, country, phone')
             .eq('id', user.id)
             .single();
           
           if (!error && data) {
-            const profileData = data as { full_name?: string; country?: string };
+            const profileData = data as { full_name?: string; country?: string; phone?: string };
             setUserProfile(profileData as UserProfile);
             const userCountry = profileData.country || 'Ghana';
             const userCurrency = getCountryCurrency(userCountry);
@@ -203,6 +204,7 @@ export default function CheckoutPage() {
             setFormData(prev => ({
               ...prev,
               fullName: profileData.full_name || '',
+              phoneNumber: profileData.phone || '',
               country: userCountry
             }));
             setCurrency(userCurrency);
@@ -273,9 +275,9 @@ export default function CheckoutPage() {
   // Show loading while fetching membership data
   if (loadingMembership || !membershipData) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white py-8 px-4 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-white py-8 px-4 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading membership details...</p>
         </div>
       </div>
@@ -348,7 +350,7 @@ export default function CheckoutPage() {
       // Generate client-side payment hash for fraud prevention
       const paymentHash = generatePaymentHash({
         membership_package_id: membershipId,
-        user_id: user.id,
+        user_id: user?.id || '',
         usd_price: usdPrice,
         provider: selectedProvider,
         timestamp: Date.now()
@@ -451,12 +453,12 @@ export default function CheckoutPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white py-8 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-white py-8 px-4">
       <div className="max-w-6xl mx-auto">
         {/* Back Button */}
         <button
           onClick={() => router.back()}
-          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6"
+          className="flex items-center gap-2 text-orange-600 hover:text-orange-700 mb-6"
         >
           <ArrowLeft className="w-5 h-5" />
           <span>Back</span>
@@ -495,9 +497,17 @@ export default function CheckoutPage() {
                       <div className="flex items-center">
                         <div className="w-8 h-8 mr-3 rounded-full bg-gray-100 flex items-center justify-center">
                           {provider === 'paystack' ? (
-                            <span className="text-xs font-bold text-blue-600">P</span>
+                            <img 
+                              src="/Paystack_idIi-h8rZ0_1.png" 
+                              alt="Paystack" 
+                              className="w-6 h-6 object-contain"
+                            />
                           ) : (
-                            <span className="text-xs font-bold text-green-600">K</span>
+                            <img 
+                              src="/kora.jpeg" 
+                              alt="Kora" 
+                              className="w-6 h-6 object-contain"
+                            />
                           )}
                         </div>
                         <div>
@@ -525,9 +535,19 @@ export default function CheckoutPage() {
                 <div className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-700">
                   <div className="flex items-center">
                     <div className="w-6 h-6 mr-2 rounded-full bg-gray-200 flex items-center justify-center">
-                      <span className="text-xs font-bold capitalize">
-                        {selectedProvider === 'paystack' ? 'P' : 'K'}
-                      </span>
+                      {selectedProvider === 'paystack' ? (
+                        <img 
+                          src="/Paystack_idIi-h8rZ0_1.png" 
+                          alt="Paystack" 
+                          className="w-4 h-4 object-contain"
+                        />
+                      ) : (
+                        <img 
+                          src="/kora.jpeg" 
+                          alt="Kora" 
+                          className="w-4 h-4 object-contain"
+                        />
+                      )}
                     </div>
                     <span className="capitalize">{selectedProvider}</span>
                   </div>
@@ -627,7 +647,7 @@ export default function CheckoutPage() {
               <div className="mb-6">
                 <h3 className="text-sm font-semibold text-gray-700 mb-3">Top features</h3>
                 <ul className="space-y-3">
-                  {currentPlan.features.map((feature, index) => (
+                  {currentPlan.features.map((feature: string, index: number) => (
                     <li key={index} className="flex items-start gap-3">
                       <Check className="w-5 h-5 text-[#ed874a] flex-shrink-0 mt-0.5" />
                       <span className="text-gray-700 text-sm">{feature}</span>
@@ -686,7 +706,7 @@ export default function CheckoutPage() {
               <button
                 onClick={handleSubscribe}
                 disabled={loading}
-                className="w-full py-4 bg-gray-900 text-white rounded-xl font-semibold hover:bg-gray-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-4 bg-gradient-to-r from-[#ed874a] to-orange-500 text-white rounded-xl font-semibold hover:from-orange-600 hover:to-orange-600 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
               >
                 {loading ? 'Processing...' : 'Subscribe'}
               </button>
