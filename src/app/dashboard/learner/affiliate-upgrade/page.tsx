@@ -12,7 +12,7 @@ import {
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import LearnerDashboardLayout from '@/components/dashboard/LearnerDashboardLayout'
+import { useAuth } from '@/lib/supabase/auth'
 
 const AffiliateUpgradePage = () => {
   const [selectedPlan, setSelectedPlan] = useState('basic')
@@ -134,7 +134,7 @@ const AffiliateUpgradePage = () => {
   ]
 
   return (
-    <LearnerDashboardLayout title="Become an Affiliate">
+    <div className="space-y-6">
       {/* Hero Section */}
       <Card className="mb-8 bg-gradient-to-r from-[#ed874a]/10 to-[#d76f32]/10 border-[#ed874a]/20">
         <CardContent className="p-8">
@@ -334,7 +334,7 @@ const AffiliateUpgradePage = () => {
           Commissions are earned only when referred users purchase and complete courses. This is not a multi-level marketing (MLM) scheme.
         </p>
       </div>
-    </LearnerDashboardLayout>
+    </div>
   )
 }
 

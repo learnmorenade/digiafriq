@@ -17,7 +17,6 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import LearnerDashboardLayout from '@/components/dashboard/LearnerDashboardLayout'
 import { useProfile } from '@/lib/hooks/useProfile'
 
 const ProfilePage = () => {
@@ -52,28 +51,24 @@ const ProfilePage = () => {
 
   if (loading) {
     return (
-      <LearnerDashboardLayout title="Profile Settings">
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="w-8 h-8 animate-spin text-[#ed874a]" />
-          <span className="ml-2 text-gray-600">Loading your profile...</span>
-        </div>
-      </LearnerDashboardLayout>
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-[#ed874a]" />
+        <span className="ml-2 text-gray-600">Loading your profile...</span>
+      </div>
     )
   }
 
   if (error) {
     return (
-      <LearnerDashboardLayout title="Profile Settings">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-600">Error loading profile: {error}</p>
-          <Button 
-            onClick={() => window.location.reload()} 
-            className="mt-2 bg-red-600 hover:bg-red-700"
-          >
-            Retry
-          </Button>
-        </div>
-      </LearnerDashboardLayout>
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <p className="text-red-600">Error loading profile: {error}</p>
+        <Button 
+          onClick={() => window.location.reload()} 
+          className="mt-2 bg-red-600 hover:bg-red-700"
+        >
+          Retry
+        </Button>
+      </div>
     )
   }
 
@@ -118,8 +113,7 @@ const ProfilePage = () => {
   }
 
   return (
-    <LearnerDashboardLayout title="Profile Settings">
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-800">Profile Settings</h1>
@@ -275,7 +269,6 @@ const ProfilePage = () => {
           </div>
         </div>
       </div>
-    </LearnerDashboardLayout>
   )
 }
 

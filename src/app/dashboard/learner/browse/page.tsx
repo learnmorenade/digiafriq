@@ -14,7 +14,6 @@ import {
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import LearnerDashboardLayout from '@/components/dashboard/LearnerDashboardLayout'
 import { useBrowseCourses } from '@/lib/hooks/useBrowseCourses'
 import CoursePreviewModal from '@/components/CoursePreviewModal'
 import Image from 'next/image'
@@ -54,28 +53,24 @@ const BrowseCoursesPage = () => {
 
   if (loading) {
     return (
-      <LearnerDashboardLayout title="Browse Courses">
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="w-8 h-8 animate-spin text-[#ed874a]" />
-          <span className="ml-2 text-gray-600">Loading courses...</span>
-        </div>
-      </LearnerDashboardLayout>
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-[#ed874a]" />
+        <span className="ml-2 text-gray-600">Loading courses...</span>
+      </div>
     )
   }
 
   if (error) {
     return (
-      <LearnerDashboardLayout title="Browse Courses">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-600">Error loading courses: {error}</p>
-          <Button 
-            onClick={() => window.location.reload()} 
-            className="mt-2 bg-red-600 hover:bg-red-700"
-          >
-            Retry
-          </Button>
-        </div>
-      </LearnerDashboardLayout>
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <p className="text-red-600">Error loading courses: {error}</p>
+        <Button 
+          onClick={() => window.location.reload()} 
+          className="mt-2 bg-red-600 hover:bg-red-700"
+        >
+          Retry
+        </Button>
+      </div>
     )
   }
 
@@ -115,8 +110,7 @@ const BrowseCoursesPage = () => {
   }
 
   return (
-    <LearnerDashboardLayout title="Browse Courses">
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-800">Browse Courses</h1>
@@ -297,7 +291,6 @@ const BrowseCoursesPage = () => {
           </Button>
         </div>
       )}
-      </div>
 
       {/* Course Preview Modal */}
       {previewCourse && (
@@ -312,7 +305,7 @@ const BrowseCoursesPage = () => {
           }}
         />
       )}
-    </LearnerDashboardLayout>
+    </div>
   )
 }
 

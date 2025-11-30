@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Check, CreditCard, Wallet } from 'lucide-react';
 import { useAuth } from '@/lib/supabase/auth';
+import { useMembershipStatus } from '@/lib/hooks/useMembershipStatus';
 import { supabase } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 
@@ -104,6 +105,7 @@ export default function CheckoutPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
+  const { hasLearnerMembership } = useMembershipStatus();
 
   // Get membership details from URL params
   const membershipId = searchParams.get('membershipId');
@@ -117,6 +119,7 @@ export default function CheckoutPage() {
   // State for membership data
   const [membershipData, setMembershipData] = useState<any>(null);
   const [loadingMembership, setLoadingMembership] = useState(true);
+  const [allMemberships, setAllMemberships] = useState<any[]>([]);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -150,6 +153,20 @@ export default function CheckoutPage() {
         
         console.log('🧪 Database test result:', { testData, testError });
         
+        // Fetch all active memberships for upgrade pricing calculation
+        const { data: allMembershipsData, error: allMembershipsError } = await supabase
+          .from('membership_packages')
+          .select('*')
+          .eq('is_active', true)
+          .order('price', { ascending: true });
+
+        if (allMembershipsError) {
+          console.error('❌ Error fetching all memberships:', allMembershipsError);
+        } else {
+          setAllMemberships(allMembershipsData || []);
+          console.log('📊 All memberships fetched:', allMembershipsData);
+        }
+        
         // Now fetch the specific membership
         const { data, error } = await supabase
           .from('membership_packages')
@@ -179,6 +196,38 @@ export default function CheckoutPage() {
 
     fetchMembershipData();
   }, [membershipId, router]);
+
+  // Calculate upgrade pricing
+  const upgradePricing = useMemo(() => {
+    if (!membershipData || !hasLearnerMembership || membershipData.member_type !== 'affiliate') {
+      return null;
+    }
+
+    const learnerMembership = allMemberships.find(m => m.member_type === 'learner');
+    if (!learnerMembership) {
+      console.warn('⚠️ Learner membership not found for upgrade calculation');
+      return null;
+    }
+
+    const upgradePrice = membershipData.price - learnerMembership.price;
+    const isUpgrade = upgradePrice < membershipData.price && upgradePrice > 0;
+
+    console.log('💰 Upgrade pricing calculation:', {
+      membershipName: membershipData.name,
+      originalPrice: membershipData.price,
+      learnerPrice: learnerMembership.price,
+      upgradePrice,
+      isUpgrade
+    });
+
+    return {
+      originalPrice: membershipData.price,
+      learnerPrice: learnerMembership.price,
+      upgradePrice,
+      isUpgrade,
+      savings: membershipData.price - upgradePrice
+    };
+  }, [membershipData, hasLearnerMembership, allMemberships]);
 
   // Fetch user profile and set country
   useEffect(() => {
@@ -248,22 +297,29 @@ export default function CheckoutPage() {
     fetchUserProfile();
   }, [user?.id]);
 
-  // Always show USD price (membership prices are in USD)
-  const displayPrice = membershipData?.price || 0;
+  // Always show actual price (upgrade price or full price)
+  const actualPrice = upgradePricing?.isUpgrade ? upgradePricing.upgradePrice : membershipData?.price || 0;
+  const displayPrice = actualPrice;
   const displayCurrency = 'USD';
 
   // Current membership details
   const currentPlan = {
-    name: membershipData?.name || 'Membership',
-    features: membershipData?.features || [
+    name: upgradePricing?.isUpgrade ? 'Upgrade to Affiliate' : (membershipData?.name || 'Membership'),
+    features: upgradePricing?.isUpgrade ? [
+      'Earn commissions on course sales',
+      'Access affiliate dashboard',
+      'Track earnings and analytics',
+      'Promotional materials provided',
+      'Dedicated affiliate support'
+    ] : (membershipData?.features || [
       'Access to platform features',
       'Customer support',
       'Regular updates'
-    ],
+    ]),
   };
 
   // Calculate converted price for display
-  const usdPrice = membershipData?.price || 0;
+  const usdPrice = actualPrice;
   const convertedPrice = usdPrice * CURRENCY_RATES[currency].rate;
 
   // Provider selection handler
@@ -344,20 +400,23 @@ export default function CheckoutPage() {
 
       console.log('📝 Preparing payment request...');
       
-      // Send USD price to edge function for conversion
-      const usdPrice = membershipData?.price || 0;
+      // Calculate the actual price to charge (upgrade price or full price)
+      const actualPrice = upgradePricing?.isUpgrade ? upgradePricing.upgradePrice : membershipData?.price || 0;
       
       // Generate client-side payment hash for fraud prevention
       const paymentHash = generatePaymentHash({
         membership_package_id: membershipId,
         user_id: user?.id || '',
-        usd_price: usdPrice,
+        usd_price: actualPrice,
         provider: selectedProvider,
         timestamp: Date.now()
       });
       
-      console.log('� Payment details:', {
-        originalPrice: usdPrice,
+      console.log('💰 Payment details:', {
+        originalPrice: membershipData?.price || 0,
+        actualPrice,
+        isUpgrade: upgradePricing?.isUpgrade || false,
+        upgradeSavings: upgradePricing?.savings || 0,
         originalCurrency: 'USD',
         selectedProvider,
         userCountry: formData.country,
@@ -372,7 +431,10 @@ export default function CheckoutPage() {
           full_name: formData.fullName,
           phone_number: formData.phoneNumber,
           country: formData.country,
-          usd_price: usdPrice, // Send USD price for edge function conversion
+          usd_price: actualPrice, // Send actual price (upgrade or full price)
+          original_price: membershipData?.price || 0, // Send original price for reference
+          is_upgrade: upgradePricing?.isUpgrade || false, // Flag for upgrade processing
+          upgrade_savings: upgradePricing?.savings || 0, // Savings amount
           payment_hash: paymentHash, // Fraud prevention hash
           user_agent: navigator.userAgent, // Additional fraud prevention
           timestamp: Date.now(),
@@ -666,9 +728,25 @@ export default function CheckoutPage() {
 
               {/* Pricing Breakdown */}
               <div className="border-t border-gray-200 pt-6 mb-6">
+                {upgradePricing?.isUpgrade && (
+                  <>
+                    <div className="flex justify-between text-gray-700 mb-2">
+                      <span>Original Price (USD)</span>
+                      <span className="line-through">${upgradePricing.originalPrice.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-green-600 mb-2">
+                      <span>Learner Discount</span>
+                      <span>-${upgradePricing.savings.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-gray-700 mb-2">
+                      <span>Upgrade Price (USD)</span>
+                      <span className="font-semibold">${actualPrice.toLocaleString()}</span>
+                    </div>
+                  </>
+                )}
                 <div className="flex justify-between text-gray-700 mb-2">
-                  <span>Base Price (USD)</span>
-                  <span>${usdPrice.toLocaleString()}</span>
+                  <span>{upgradePricing?.isUpgrade ? 'Final Price (USD)' : 'Base Price (USD)'}</span>
+                  <span>${actualPrice.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between text-gray-700 mb-2">
                   <span>Exchange Rate</span>
@@ -684,7 +762,7 @@ export default function CheckoutPage() {
                 </div>
                 <div className="flex justify-between text-gray-700 mb-2">
                   <span>Type</span>
-                  <span className="capitalize">{membershipData?.member_type || 'learner'}</span>
+                  <span className="capitalize">{upgradePricing?.isUpgrade ? 'Affiliate Upgrade' : (membershipData?.member_type || 'learner')}</span>
                 </div>
                 <div className="flex justify-between text-gray-500 text-sm mb-2">
                   <span>Tax (0%)</span>
@@ -716,15 +794,26 @@ export default function CheckoutPage() {
                 disabled={loading}
                 className="w-full py-4 bg-gradient-to-r from-[#ed874a] to-orange-500 text-white rounded-xl font-semibold hover:from-orange-600 hover:to-orange-600 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
               >
-                {loading ? 'Processing...' : 'Subscribe'}
+                {loading ? 'Processing...' : (upgradePricing?.isUpgrade ? 'Upgrade Now' : 'Subscribe')}
               </button>
 
               {/* Info */}
-              <p className="text-xs text-gray-500 text-center mt-4">
-                {(membershipData?.duration_months || 12) >= 12 
-                  ? 'Annual subscription. Renews automatically.'
-                  : `${membershipData?.duration_months || 12} month subscription. Renews automatically.`}
+              <p className="text-xs text-gray-500 text-center mt-2">
+                {upgradePricing?.isUpgrade 
+                  ? 'Add affiliate access to your existing learner membership'
+                  : ((membershipData?.duration_months || 12) >= 12 
+                    ? 'Annual subscription. Renews automatically.'
+                    : `${membershipData?.duration_months || 12} month subscription. Renews automatically.`)
+                }
               </p>
+              
+              {upgradePricing?.isUpgrade && (
+                <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <p className="text-xs text-green-700 text-center">
+                    <strong>Upgrade Savings:</strong> You're saving ${upgradePricing.savings.toLocaleString()} by upgrading instead of buying the full bundle!
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>

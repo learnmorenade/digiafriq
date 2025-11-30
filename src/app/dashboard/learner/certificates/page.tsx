@@ -13,7 +13,6 @@ import {
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import LearnerDashboardLayout from '@/components/dashboard/LearnerDashboardLayout'
 import { useCertificates } from '@/lib/hooks/useCertificates'
 
 const CertificatesPage = () => {
@@ -46,28 +45,24 @@ const CertificatesPage = () => {
 
   if (loading) {
     return (
-      <LearnerDashboardLayout title="My Certificates">
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="w-8 h-8 animate-spin text-[#ed874a]" />
-          <span className="ml-2 text-gray-600">Loading your certificates...</span>
-        </div>
-      </LearnerDashboardLayout>
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-[#ed874a]" />
+        <span className="ml-2 text-gray-600">Loading your certificates...</span>
+      </div>
     )
   }
 
   if (error) {
     return (
-      <LearnerDashboardLayout title="My Certificates">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-600">Error loading certificates: {error}</p>
-          <Button 
-            onClick={() => window.location.reload()} 
-            className="mt-2 bg-red-600 hover:bg-red-700"
-          >
-            Retry
-          </Button>
-        </div>
-      </LearnerDashboardLayout>
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <p className="text-red-600">Error loading certificates: {error}</p>
+        <Button 
+          onClick={() => window.location.reload()} 
+          className="mt-2 bg-red-600 hover:bg-red-700"
+        >
+          Retry
+        </Button>
+      </div>
     )
   }
 
@@ -128,8 +123,7 @@ const CertificatesPage = () => {
   }
 
   return (
-    <LearnerDashboardLayout title="My Certificates">
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-800">My Certificates</h1>
@@ -269,8 +263,7 @@ const CertificatesPage = () => {
             </Card>
           ) : null}
         </div>
-      </div>
-    </LearnerDashboardLayout>
+    </div>
   )
 }
 

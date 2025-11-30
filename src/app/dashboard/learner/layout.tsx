@@ -22,9 +22,15 @@ export default function LearnerLayout({
 
   useEffect(() => {
     // If user doesn't have learner membership and is not on payment-related pages, redirect to membership
-    if (!loading && !hasLearnerMembership && !isPaymentRelatedPage) {
-      router.push('/dashboard/learner/membership');
-    }
+    // Add a small delay to allow membership status to load after login
+    const redirectTimer = setTimeout(() => {
+      if (!loading && !hasLearnerMembership && !isPaymentRelatedPage) {
+        console.log('🔄 Learner layout: No membership found, redirecting to membership page')
+        router.push('/dashboard/learner/membership');
+      }
+    }, 1000); // 1 second delay
+
+    return () => clearTimeout(redirectTimer);
   }, [hasLearnerMembership, loading, isPaymentRelatedPage, router]);
 
   // Show loading state within dashboard layout

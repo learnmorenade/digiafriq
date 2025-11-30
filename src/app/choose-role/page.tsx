@@ -2,6 +2,7 @@
 import React, { useState, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/supabase/auth'
+import { supabase } from '@/lib/supabase/client'
 import { GraduationCap, Users, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Image from 'next/image'
@@ -61,14 +62,47 @@ const ChooseRolePage = () => {
       await new Promise(resolve => setTimeout(resolve, 500))
       
       // Redirect to appropriate dashboard
-      // For learners, redirect to membership page since they likely don't have membership yet
-      // For affiliates, redirect to main dashboard
-      const dashboardPath = selectedRole === 'learner' 
-        ? '/dashboard/learner/membership' 
-        : '/dashboard/affiliate'
-      
-      console.log(`🔄 Redirecting to: ${dashboardPath}`)
-      router.push(dashboardPath)
+      // Check if learner has existing membership first
+      if (selectedRole === 'learner') {
+        try {
+          // Check for active learner membership
+          if (!user?.id) {
+            console.error('User ID not available for membership check')
+            router.push('/dashboard/learner/membership')
+            return
+          }
+
+          const { data: memberships } = await supabase
+            .from('user_memberships')
+            .select(`
+              is_active,
+              expires_at,
+              membership_packages (
+                member_type
+              )
+            `)
+            .eq('user_id', user.id)
+            .eq('is_active', true)
+            .gt('expires_at', new Date().toISOString()) as any
+
+          const hasLearnerMembership = memberships?.some((m: any) => m.membership_packages?.member_type === 'learner')
+          
+          if (hasLearnerMembership) {
+            // Learner with active membership - go directly to dashboard
+            router.push('/dashboard/learner')
+          } else {
+            // Learner without membership - go to membership page
+            router.push('/dashboard/learner/membership')
+          }
+        } catch (error) {
+          console.error('Error checking learner membership:', error)
+          // Fallback to membership page
+          router.push('/dashboard/learner/membership')
+        }
+      } else {
+        // For affiliates, redirect to main dashboard
+        router.push('/dashboard/affiliate')
+      }
     } catch (error) {
       console.error('❌ Error selecting role:', error)
       setError('An error occurred while selecting your role. Please try again.')

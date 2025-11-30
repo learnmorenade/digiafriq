@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/supabase/auth'
+import { supabase } from '@/lib/supabase/client'
 import { Mail, Lock, Loader2, Eye, EyeOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
@@ -20,8 +21,49 @@ const LoginPage = () => {
   // Redirect if already logged in
   useEffect(() => {
     if (!authLoading && user && profile) {
-      // Redirect to role selection page after successful login
-      router.push('/choose-role')
+      // Check user's existing role and redirect appropriately
+      const checkMembershipAndRedirect = async () => {
+        try {
+          // Get active memberships for the user
+          const { data: memberships } = await supabase
+            .from('user_memberships')
+            .select(`
+              is_active,
+              expires_at,
+              membership_packages (
+                member_type
+              )
+            `)
+            .eq('user_id', user.id)
+            .eq('is_active', true)
+            .gt('expires_at', new Date().toISOString()) as any
+
+          const hasLearnerMembership = memberships?.some((m: any) => m.membership_packages?.member_type === 'learner')
+          const userRole = profile.active_role || profile.role
+
+          console.log('Login redirect check:', { userRole, hasLearnerMembership, membershipsCount: memberships?.length })
+
+          if (userRole === 'learner' && hasLearnerMembership) {
+            // Learner with active membership - go directly to dashboard
+            router.push('/dashboard/learner')
+          } else if (userRole === 'affiliate') {
+            // Affiliate - go to affiliate dashboard
+            router.push('/dashboard/affiliate')
+          } else if (userRole === 'admin') {
+            // Admin - go to admin dashboard
+            router.push('/dashboard/admin')
+          } else {
+            // No role or no membership - go to role selection
+            router.push('/choose-role')
+          }
+        } catch (error) {
+          console.error('Error checking membership during login:', error)
+          // Fallback to role selection
+          router.push('/choose-role')
+        }
+      }
+
+      checkMembershipAndRedirect()
     }
   }, [user, profile, authLoading, router])
 
