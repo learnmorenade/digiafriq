@@ -1,7 +1,6 @@
 "use client"
 import React, { useState } from 'react'
 import { Search, Monitor, X, Trophy, Gift, Calendar, Users, Target, Loader2 } from 'lucide-react'
-import AffiliateDashboardLayout from '@/components/dashboard/AffiliateDashboardLayout'
 import { useContests } from '@/lib/hooks/useContests'
 
 interface Contest {
@@ -46,18 +45,15 @@ const EndedContestsPage = () => {
 
   if (loading) {
     return (
-      <AffiliateDashboardLayout title="Ended Contests">
         <div className="flex items-center justify-center h-64">
           <Loader2 className="w-8 h-8 animate-spin text-[#ed874a]" />
           <span className="ml-2 text-gray-600">Loading contests...</span>
         </div>
-      </AffiliateDashboardLayout>
     )
   }
 
   if (error) {
     return (
-      <AffiliateDashboardLayout title="Ended Contests">
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <p className="text-red-600">Error loading contests: {error}</p>
           <button 
@@ -67,7 +63,6 @@ const EndedContestsPage = () => {
             Retry
           </button>
         </div>
-      </AffiliateDashboardLayout>
     )
   }
 
@@ -90,8 +85,7 @@ const EndedContestsPage = () => {
   }
 
   return (
-    <AffiliateDashboardLayout title="Ended Contests">
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header with Search */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <h1 className="text-2xl font-bold text-gray-800">Ended Contests</h1>
@@ -350,7 +344,6 @@ const EndedContestsPage = () => {
         </div>
       </div>
 
-    </AffiliateDashboardLayout>
   )
 }
 

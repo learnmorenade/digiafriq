@@ -99,7 +99,7 @@ const AffiliateDashboard = () => {
     <Suspense fallback={
       <div className="p-6 flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-[#ed874a] mx-auto mb-4" />
+          <Loader2 className="w-8 h-8 animate-spin text-orange-600 mx-auto mb-4" />
           <p className="text-gray-600">Loading...</p>
         </div>
       </div>
@@ -166,7 +166,7 @@ const AffiliateDashboard = () => {
                   </div>
                 </div>
                 <div className="flex justify-end mt-3 lg:mt-4">
-                  <Button variant="ghost" size="sm" className="text-[#ed874a] hover:text-[#d76f32] text-xs lg:text-sm">
+                  <Button variant="ghost" size="sm" className="text-orange-600 hover:text-[#d76f32] text-xs lg:text-sm">
                     View All
                   </Button>
                 </div>
@@ -282,7 +282,7 @@ const AffiliateDashboard = () => {
                 {/* View All Link */}
                 {(recentCommissions.length > 5 || recentPayouts.length > 3) && (
                   <div className="text-center pt-2">
-                    <Button variant="ghost" size="sm" className="text-[#ed874a] hover:text-[#d76f32]">
+                    <Button variant="ghost" size="sm" className="text-orange-600 hover:text-[#d76f32]">
                       View All Activity
                     </Button>
                   </div>

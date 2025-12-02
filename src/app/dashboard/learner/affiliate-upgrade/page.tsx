@@ -1,5 +1,5 @@
 "use client"
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { 
   Users, 
   DollarSign,
@@ -10,12 +10,52 @@ import {
   Award,
   Zap
 } from 'lucide-react'
+import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { useAuth } from '@/lib/supabase/auth'
+import { useRouter } from 'next/navigation'
 
 const AffiliateUpgradePage = () => {
-  const [selectedPlan, setSelectedPlan] = useState('basic')
+  const router = useRouter()
+  const [affiliatePackageId, setAffiliatePackageId] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  // Fetch the $7 affiliate package
+  useEffect(() => {
+    const fetchAffiliatePackage = async () => {
+      try {
+        const response = await fetch('/api/memberships?member_type=affiliate')
+        if (response.ok) {
+          const data = await response.json()
+          // Find the $7 USD package
+          const $7Package = data.packages?.find((pkg: any) => 
+            pkg.price === 7.00 && 
+            pkg.currency === 'USD' && 
+            pkg.member_type === 'affiliate'
+          )
+          if ($7Package) {
+            setAffiliatePackageId($7Package.id)
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch affiliate package:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchAffiliatePackage()
+  }, [])
+
+  const handleUpgradeClick = () => {
+    if (affiliatePackageId) {
+      // Go directly to checkout for the $7 package
+      router.push(`/dashboard/learner/membership/checkout?membershipId=${affiliatePackageId}&upgrade=true`)
+    } else {
+      // Fallback to membership page if package not found
+      router.push('/dashboard/learner/membership')
+    }
+  }
 
   const benefits = [
     {
@@ -50,41 +90,16 @@ const AffiliateUpgradePage = () => {
     }
   ]
 
-  const plans = [
-    {
-      id: 'basic',
-      name: 'Basic Affiliate',
-      price: '70',
-      period: 'One-time setup fee',
-      commission: '100 Cedis per referral',
-      features: [
-        'Affiliate dashboard access',
-        'Basic marketing materials',
-        'Weekly payouts',
-        'Email support',
-        'Referral tracking',
-        'Basic analytics'
-      ],
-      popular: false
-    },
-    {
-      id: 'pro',
-      name: 'Pro Affiliate',
-      price: '150',
-      period: 'One-time setup fee',
-      commission: '120 Cedis per referral',
-      features: [
-        'Everything in Basic',
-        'Advanced marketing materials',
-        'Priority support',
-        'Advanced analytics',
-        'Custom referral codes',
-        'Monthly bonus opportunities',
-        'Exclusive webinars'
-      ],
-      popular: true
-    }
-  ]
+  if (loading) {
+    return (
+      <div className="p-6 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-orange-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading membership options...</p>
+        </div>
+      </div>
+    )
+  }
 
   const successStories = [
     {
@@ -143,11 +158,10 @@ const AffiliateUpgradePage = () => {
               <Users className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-4">
-              Turn Your Learning Into Earning
+              Upgrade to Affiliate Membership
             </h1>
             <p className="text-lg text-gray-600 mb-6 max-w-2xl mx-auto">
-              You&apos;ve experienced the value of our courses firsthand. Now share that value with others 
-              and earn commissions for every successful referral.
+              Ready to start earning? View our membership options to upgrade to affiliate and start earning commissions for referrals.
             </p>
             <div className="flex items-center justify-center space-x-8 text-sm text-gray-600">
               <div className="flex items-center">
@@ -181,66 +195,6 @@ const AffiliateUpgradePage = () => {
                 </div>
                 <h3 className="font-semibold text-gray-900 mb-2">{benefit.title}</h3>
                 <p className="text-sm text-gray-600">{benefit.description}</p>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Pricing Plans */}
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle className="text-2xl font-bold text-center">Choose Your Affiliate Plan</CardTitle>
-          <p className="text-center text-gray-600">Start earning with a one-time setup fee</p>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-            {plans.map(plan => (
-              <div 
-                key={plan.id}
-                className={`relative p-6 rounded-lg border-2 cursor-pointer transition-all ${
-                  selectedPlan === plan.id 
-                    ? 'border-[#ed874a] bg-[#ed874a]/5' 
-                    : 'border-gray-200 hover:border-[#ed874a]/50'
-                } ${plan.popular ? 'ring-2 ring-[#ed874a]/20' : ''}`}
-                onClick={() => setSelectedPlan(plan.id)}
-              >
-                {plan.popular && (
-                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                    <span className="bg-[#ed874a] text-white px-4 py-1 rounded-full text-sm font-medium">
-                      Most Popular
-                    </span>
-                  </div>
-                )}
-                
-                <div className="text-center mb-6">
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">{plan.name}</h3>
-                  <div className="mb-2">
-                    <span className="text-3xl font-bold text-[#ed874a]">{plan.price}</span>
-                    <span className="text-gray-600 ml-2">Cedis</span>
-                  </div>
-                  <p className="text-sm text-gray-600">{plan.period}</p>
-                  <p className="text-lg font-semibold text-green-600 mt-2">{plan.commission}</p>
-                </div>
-                
-                <ul className="space-y-3 mb-6">
-                  {plan.features.map((feature, index) => (
-                    <li key={index} className="flex items-center text-sm">
-                      <CheckCircle className="w-4 h-4 text-green-500 mr-3 flex-shrink-0" />
-                      <span>{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-                
-                <Button 
-                  className={`w-full ${
-                    selectedPlan === plan.id 
-                      ? 'bg-[#ed874a] hover:bg-[#d76f32]' 
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  {selectedPlan === plan.id ? 'Selected' : 'Select Plan'}
-                </Button>
               </div>
             ))}
           </div>
@@ -306,22 +260,23 @@ const AffiliateUpgradePage = () => {
         </CardContent>
       </Card>
 
-      {/* CTA Section */}
+      {/* Direct CTA - No pricing section needed */}
       <Card className="bg-gradient-to-r from-[#ed874a] to-[#d76f32] text-white">
         <CardContent className="p-8 text-center">
           <h2 className="text-2xl font-bold mb-4">Ready to Start Earning?</h2>
           <p className="text-lg mb-6 opacity-90">
-            Join hundreds of learners who are already earning by sharing knowledge
+            View our membership options to upgrade to affiliate and start earning commissions for every successful referral.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Button 
+              onClick={handleUpgradeClick}
               size="lg" 
               className="bg-white text-[#ed874a] hover:bg-gray-100 px-8"
             >
-              Upgrade to {plans.find(p => p.id === selectedPlan)?.name} - {plans.find(p => p.id === selectedPlan)?.price} Cedis
+              Upgrade for $7
             </Button>
             <p className="text-sm opacity-75">
-              One-time setup fee • Start earning immediately
+              One-time payment • Start earning immediately
             </p>
           </div>
         </CardContent>

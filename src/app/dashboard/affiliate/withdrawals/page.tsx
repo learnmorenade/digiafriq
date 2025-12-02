@@ -13,7 +13,6 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import AffiliateDashboardLayout from '@/components/dashboard/AffiliateDashboardLayout'
 
 interface BankPaymentMethod {
   id: number
@@ -189,8 +188,7 @@ const WithdrawalsPage = () => {
   }
 
   return (
-    <AffiliateDashboardLayout title="Withdraw Funds">
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-800">Withdraw Funds</h1>
@@ -343,7 +341,7 @@ const WithdrawalsPage = () => {
                           <a 
                             href="/dashboard/affiliate/profile" 
                             target="_blank" 
-                            className="text-sm text-[#ed874a] hover:text-[#d76f32] underline"
+                            className="text-sm text-orange-600 hover:text-[#d76f32] underline"
                           >
                             Edit Details
                           </a>
@@ -458,8 +456,6 @@ const WithdrawalsPage = () => {
           </CardContent>
         </Card>
       </div>
-
-    </AffiliateDashboardLayout>
   )
 }
 

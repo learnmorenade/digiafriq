@@ -11,7 +11,6 @@ import {
   Target,
   Loader2
 } from 'lucide-react'
-import AffiliateDashboardLayout from '@/components/dashboard/AffiliateDashboardLayout'
 import { useContests } from '@/lib/hooks/useContests'
 
 interface Contest {
@@ -56,18 +55,15 @@ const RunningContestsPage = () => {
 
   if (loading) {
     return (
-      <AffiliateDashboardLayout title="Running Contests">
         <div className="flex items-center justify-center h-64">
           <Loader2 className="w-8 h-8 animate-spin text-[#ed874a]" />
           <span className="ml-2 text-gray-600">Loading contests...</span>
         </div>
-      </AffiliateDashboardLayout>
     )
   }
 
   if (error) {
     return (
-      <AffiliateDashboardLayout title="Running Contests">
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <p className="text-red-600">Error loading contests: {error}</p>
           <button 
@@ -77,7 +73,6 @@ const RunningContestsPage = () => {
             Retry
           </button>
         </div>
-      </AffiliateDashboardLayout>
     )
   }
 
@@ -99,8 +94,7 @@ const RunningContestsPage = () => {
   }
 
   return (
-    <AffiliateDashboardLayout title="Running Contests">
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header with Search */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <h1 className="text-2xl font-bold text-gray-800">Running Contests</h1>
@@ -365,7 +359,6 @@ const RunningContestsPage = () => {
         </div>
       </div>
 
-    </AffiliateDashboardLayout>
   )
 }
 

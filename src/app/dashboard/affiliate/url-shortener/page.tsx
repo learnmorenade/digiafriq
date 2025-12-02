@@ -13,7 +13,6 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import AffiliateDashboardLayout from '@/components/dashboard/AffiliateDashboardLayout'
 
 const URLShortenerPage = () => {
   const [originalUrl, setOriginalUrl] = useState('')
@@ -111,7 +110,7 @@ const URLShortenerPage = () => {
   }
 
   return (
-    <AffiliateDashboardLayout title="URL Shortener">
+    <div className="space-y-6">
       {/* Summary Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {summaryStats.map((stat, index) => (
@@ -306,7 +305,7 @@ const URLShortenerPage = () => {
           </div>
         </CardContent>
       </Card>
-    </AffiliateDashboardLayout>
+    </div>
   )
 }
 

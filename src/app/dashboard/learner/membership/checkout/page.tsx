@@ -109,6 +109,7 @@ export default function CheckoutPage() {
 
   // Get membership details from URL params
   const membershipId = searchParams.get('membershipId');
+  const isUpgradeFlow = searchParams.get('upgrade') === 'true';
 
   // Redirect if no membership data
   if (!membershipId) {
@@ -199,7 +200,7 @@ export default function CheckoutPage() {
 
   // Calculate upgrade pricing
   const upgradePricing = useMemo(() => {
-    if (!membershipData || !hasLearnerMembership || membershipData.member_type !== 'affiliate') {
+    if (!membershipData || (!hasLearnerMembership && !isUpgradeFlow) || membershipData.member_type !== 'affiliate') {
       return null;
     }
 
@@ -210,14 +211,16 @@ export default function CheckoutPage() {
     }
 
     const upgradePrice = membershipData.price - learnerMembership.price;
-    const isUpgrade = upgradePrice < membershipData.price && upgradePrice > 0;
+    const isUpgrade = (isUpgradeFlow || hasLearnerMembership) && upgradePrice < membershipData.price && upgradePrice > 0;
 
     console.log('💰 Upgrade pricing calculation:', {
       membershipName: membershipData.name,
       originalPrice: membershipData.price,
       learnerPrice: learnerMembership.price,
       upgradePrice,
-      isUpgrade
+      isUpgrade,
+      isUpgradeFlow,
+      hasLearnerMembership
     });
 
     return {
@@ -227,7 +230,7 @@ export default function CheckoutPage() {
       isUpgrade,
       savings: membershipData.price - upgradePrice
     };
-  }, [membershipData, hasLearnerMembership, allMemberships]);
+  }, [membershipData, hasLearnerMembership, allMemberships, isUpgradeFlow]);
 
   // Fetch user profile and set country
   useEffect(() => {

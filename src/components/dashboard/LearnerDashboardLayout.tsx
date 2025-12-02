@@ -173,10 +173,10 @@ const LearnerDashboardLayout = ({ children, title = "Dashboard" }: LearnerDashbo
   const handleRoleSwitch = async (role: 'learner' | 'affiliate') => {
     if (role === activeRole || switchingRole) return
 
-    // If user doesn't have the role, redirect to affiliate network page
+    // If user doesn't have the role, redirect to affiliate dashboard
     if (!availableRoles.includes(role)) {
       if (role === 'affiliate') {
-        router.push('/dashboard/affiliate/network')
+        router.push('/dashboard/affiliate')
       }
       return
     }

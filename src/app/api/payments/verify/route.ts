@@ -189,17 +189,25 @@ async function processMembershipCreation(payment: any, verificationData: any) {
           expiry_date: expiryDate.toISOString()
         })
 
-        // Create user membership
+        // Create user membership with lifetime access for affiliate
+        const membershipData: any = {
+          user_id: payment.user_id,
+          membership_package_id: membershipPackageId,
+          payment_id: payment.id,
+          started_at: startDate.toISOString(),
+          expires_at: expiryDate.toISOString(),
+          is_active: true
+        };
+
+        // Add lifetime access for affiliate memberships
+        if (membershipPackage.member_type === 'affiliate') {
+          membershipData.affiliate_lifetime_access = true;
+          console.log('👑 Lifetime affiliate access granted');
+        }
+
         const { error: membershipCreateError } = await supabase
           .from('user_memberships')
-          .insert({
-            user_id: payment.user_id,
-            membership_package_id: membershipPackageId,
-            payment_id: payment.id,
-            started_at: startDate.toISOString(),
-            expires_at: expiryDate.toISOString(),
-            is_active: true
-          }) as any
+          .insert(membershipData) as any
 
         if (membershipCreateError) {
           console.error('❌ DATABASE ERROR: Failed to create user membership:', membershipCreateError)

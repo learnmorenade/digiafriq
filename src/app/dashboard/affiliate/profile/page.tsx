@@ -9,7 +9,6 @@ import {
   Plus,
   Trash2
 } from 'lucide-react'
-import AffiliateDashboardLayout from '@/components/dashboard/AffiliateDashboardLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -289,7 +288,7 @@ const ProfileSettingsPage = () => {
   }
 
   return (
-    <AffiliateDashboardLayout title="Profile Settings">
+    <div className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Profile Information */}
         <div className="lg:col-span-2 space-y-6">
@@ -649,7 +648,7 @@ const ProfileSettingsPage = () => {
           </Card>
         </div>
       </div>
-    </AffiliateDashboardLayout>
+    </div>
   )
 }
 

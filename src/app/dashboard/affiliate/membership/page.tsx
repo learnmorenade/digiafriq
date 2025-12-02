@@ -3,7 +3,6 @@ import React from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Image from 'next/image'
-import AffiliateDashboardLayout from '@/components/dashboard/AffiliateDashboardLayout'
 
 const MembershipPage = () => {
   const membershipCard = {
@@ -16,8 +15,7 @@ const MembershipPage = () => {
   }
 
   return (
-    <AffiliateDashboardLayout title="Membership">
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-800">Membership</h1>
@@ -81,7 +79,6 @@ const MembershipPage = () => {
         </Card>
         </div>
       </div>
-    </AffiliateDashboardLayout>
   )
 }
 

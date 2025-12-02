@@ -3,7 +3,6 @@ import React from 'react'
 import { Loader2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import AffiliateDashboardLayout from '@/components/dashboard/AffiliateDashboardLayout'
 import { useLeaderboard } from '@/lib/hooks/useLeaderboard'
 
 const LeaderboardPage = () => {
@@ -19,7 +18,6 @@ const LeaderboardPage = () => {
 
   if (loading) {
     return (
-      <AffiliateDashboardLayout title="Leaderboard">
         <Card>
           <CardHeader>
             <CardTitle className="text-lg font-semibold">Leaderboard</CardTitle>
@@ -31,13 +29,11 @@ const LeaderboardPage = () => {
             </div>
           </CardContent>
         </Card>
-      </AffiliateDashboardLayout>
     )
   }
 
   if (error) {
     return (
-      <AffiliateDashboardLayout title="Leaderboard">
         <Card>
           <CardHeader>
             <CardTitle className="text-lg font-semibold">Leaderboard</CardTitle>
@@ -54,13 +50,11 @@ const LeaderboardPage = () => {
             </div>
           </CardContent>
         </Card>
-      </AffiliateDashboardLayout>
     )
   }
 
   return (
-    <AffiliateDashboardLayout title="Leaderboard">
-      <div className="space-y-6">
+    <div className="space-y-6">
         <h1 className="text-2xl font-bold text-gray-800">Leaderboard</h1>
         
         <Card className="overflow-hidden">
@@ -161,7 +155,6 @@ const LeaderboardPage = () => {
         </CardContent>
       </Card>
       </div>
-    </AffiliateDashboardLayout>
   )
 }
 

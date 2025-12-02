@@ -37,8 +37,8 @@ export default function RoleSwitcher({ className = '' }: RoleSwitcherProps) {
     // If role is locked, handle based on role type
     if (isLocked(role)) {
       if (role === 'affiliate') {
-        // Redirect to affiliate network page to show pending payment
-        router.push('/dashboard/affiliate/network')
+        // Redirect to affiliate dashboard to show pending payment
+        router.push('/dashboard/affiliate')
       } else if (role === 'learner') {
         // Learner role is free - just add it automatically
         // This shouldn't normally happen, but handle it gracefully

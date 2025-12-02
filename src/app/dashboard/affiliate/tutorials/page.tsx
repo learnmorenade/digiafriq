@@ -17,7 +17,6 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import AffiliateDashboardLayout from '@/components/dashboard/AffiliateDashboardLayout'
 import { useTutorials } from '@/lib/hooks/useTutorials'
 
 const TutorialsPage = () => {
@@ -83,11 +82,11 @@ const TutorialsPage = () => {
   const overallProgress = tutorials.length > 0 ? Math.round((completedCount / tutorials.length) * 100) : 0
 
   return (
-    <AffiliateDashboardLayout title="Affiliate Tutorials">
+    <div className="space-y-6">
       {/* Loading State */}
       {loading && (
         <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-8 h-8 animate-spin text-[#ed874a]" />
+          <Loader2 className="w-8 h-8 animate-spin text-orange-600" />
           <span className="ml-3 text-gray-600">Loading tutorials...</span>
         </div>
       )}
@@ -102,17 +101,17 @@ const TutorialsPage = () => {
 
       {/* Content */}
       {!loading && !error && (
-      <>
-      {/* Featured Tutorial */}
-      {featuredTutorial && (
-      <Card className="mb-8 bg-gradient-to-r from-[#ed874a]/10 to-[#d76f32]/10 border-[#ed874a]/20">
+        <>
+          {/* Featured Tutorial */}
+          {featuredTutorial && (
+            <Card className="mb-8 bg-gradient-to-r from-orange-600/10 to-orange-700/10 border-orange-600/20">
         <CardContent className="p-6">
           <div className="flex flex-col lg:flex-row items-center space-y-4 lg:space-y-0 lg:space-x-6">
             <div className="w-full lg:w-80 h-48 bg-gray-200 rounded-lg flex items-center justify-center">
-              <Play className="w-16 h-16 text-[#ed874a]" />
+              <Play className="w-16 h-16 text-orange-600" />
             </div>
             <div className="flex-1">
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#ed874a] text-white mb-2">
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-600 text-white mb-2">
                 Featured
               </span>
               <h2 className="text-2xl font-bold text-gray-900 mb-2">{featuredTutorial.title}</h2>
@@ -131,7 +130,7 @@ const TutorialsPage = () => {
                   {featuredTutorial.rating}
                 </div>
               </div>
-              <Button className="bg-[#ed874a] hover:bg-[#d76f32]">
+              <Button className="bg-orange-600 hover:bg-orange-700">
                 <Play className="w-4 h-4 mr-2" />
                 Start Learning
               </Button>
@@ -177,7 +176,7 @@ const TutorialsPage = () => {
             onClick={() => setSelectedCategory(category.id)}
             className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
               selectedCategory === category.id
-                ? 'bg-[#ed874a] text-white'
+                ? 'bg-orange-600 text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
@@ -220,7 +219,7 @@ const TutorialsPage = () => {
                 </div>
               </div>
               
-              <Button className="w-full bg-[#ed874a] hover:bg-[#d76f32]">
+              <Button className="w-full bg-orange-600 hover:bg-orange-700">
                 <Play className="w-4 h-4 mr-2" />
                 Start Tutorial
               </Button>
@@ -247,7 +246,7 @@ const TutorialsPage = () => {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="text-center">
-              <div className="text-2xl font-bold text-[#ed874a] mb-1">{completedCount}</div>
+              <div className="text-2xl font-bold text-orange-600 mb-1">{completedCount}</div>
               <div className="text-sm text-gray-600">Completed</div>
             </div>
             <div className="text-center">
@@ -265,9 +264,9 @@ const TutorialsPage = () => {
           </div>
         </CardContent>
       </Card>
-      </>
+        </>
       )}
-    </AffiliateDashboardLayout>
+    </div>
   )
 }
 

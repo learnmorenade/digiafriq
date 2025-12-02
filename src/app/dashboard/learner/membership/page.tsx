@@ -42,11 +42,13 @@ interface UserMembership {
 export default function LearnerMembershipPage() {
   const { user } = useAuth();
   const router = useRouter();
-  const { hasLearnerMembership, hasAffiliateMembership, activeMemberships, loading: membershipLoading, refresh } = useMembershipStatus();
+  const { hasLearnerMembership, hasAffiliateMembership, hasLifetimeAffiliateAccess, activeMemberships, loading: membershipLoading, refresh } = useMembershipStatus();
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [memberships, setMemberships] = useState<MembershipPackage[]>([]);
   const [loading, setLoading] = useState(true);
   const [userMemberships, setUserMemberships] = useState<UserMembership[]>([]);
+  const [selectedMembership, setSelectedMembership] = useState<UserMembership | null>(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
 
   useEffect(() => {
     fetchMemberships();
@@ -131,12 +133,13 @@ export default function LearnerMembershipPage() {
   };
 
   const handleManageMembership = (membership: UserMembership) => {
-    if (membership.membership_packages.member_type === 'affiliate') {
-      router.push('/dashboard/affiliate');
-    } else {
-      // For learner membership, could show details or upgrade options
-      toast.info('Membership management features coming soon');
-    }
+    setSelectedMembership(membership);
+    setShowDetailsModal(true);
+  };
+
+  const handleCloseDetailsModal = () => {
+    setShowDetailsModal(false);
+    setSelectedMembership(null);
   };
 
   const formatDate = (dateString: string) => {
@@ -234,9 +237,21 @@ export default function LearnerMembershipPage() {
                           <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
                             Active
                           </span>
-                          {isExpiringSoon && (
-                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
-                              Expires in {daysUntilExpiry} days
+                          {isLearner && (
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              isExpiringSoon 
+                                ? 'bg-orange-100 text-orange-700' 
+                                : 'bg-green-100 text-green-700'
+                            }`}>
+                              {daysUntilExpiry > 0 
+                                ? `${daysUntilExpiry} days remaining` 
+                                : 'Expired'
+                              }
+                            </span>
+                          )}
+                          {!isLearner && hasLifetimeAffiliateAccess && (
+                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 border border-purple-200">
+                              LIFETIME ACCESS
                             </span>
                           )}
                         </div>
@@ -253,7 +268,10 @@ export default function LearnerMembershipPage() {
                       <div className="flex items-center gap-2 text-gray-600">
                         <Calendar className="w-4 h-4" />
                         <span className="text-sm">
-                          Expires: {formatDate(membership.expires_at)}
+                          {!isLearner && hasLifetimeAffiliateAccess 
+                            ? 'Never Expires' 
+                            : `Expires: ${formatDate(membership.expires_at)}`
+                          }
                         </span>
                       </div>
                       <div className="flex items-center gap-2 text-gray-600">
@@ -304,7 +322,7 @@ export default function LearnerMembershipPage() {
                             onClick={() => {
                               const affiliateMemberships = memberships.filter(m => m.member_type === 'affiliate');
                               if (affiliateMemberships.length > 0) {
-                                router.push(`/dashboard/learner/membership/checkout?membershipId=${affiliateMemberships[0].id}`);
+                                router.push(`/dashboard/learner/membership/checkout?membershipId=${affiliateMemberships[0].id}&upgrade=true`);
                               } else {
                                 toast.error('Affiliate membership package not found');
                               }
@@ -381,6 +399,7 @@ export default function LearnerMembershipPage() {
             const isAffiliateUpgrade = hasLearnerMembership && membership.member_type === 'affiliate';
             const displayPrice = isAffiliateUpgrade ? membership.price - learnerPrice : membership.price;
             const isUpgrade = isAffiliateUpgrade && displayPrice < membership.price;
+            const isLifetime = membership.member_type === 'affiliate';
 
             return (
               <div
@@ -405,13 +424,15 @@ export default function LearnerMembershipPage() {
                     <h2 className={`text-2xl font-bold ${isHighlighted ? 'text-white' : 'text-gray-900'}`}>
                       {isUpgrade ? 'Upgrade to Affiliate' : membership.name}
                     </h2>
-                    <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${
-                      isHighlighted 
-                        ? 'bg-white/20 backdrop-blur-sm text-white' 
-                        : badge.color
-                    }`}>
-                      <Icon className="w-4 h-4" />
-                      {isUpgrade ? 'Upgrade' : badge.text}
+                    <div className="flex items-center gap-2">
+                      <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${
+                        isHighlighted 
+                          ? 'bg-white/20 backdrop-blur-sm text-white' 
+                          : badge.color
+                      }`}>
+                        <Icon className="w-4 h-4" />
+                        {isUpgrade ? 'Upgrade' : badge.text}
+                      </div>
                     </div>
                   </div>
 
@@ -437,21 +458,14 @@ export default function LearnerMembershipPage() {
                           </span>
                         </div>
                       )}
-                      {!isUpgrade && (
-                        <div className={`${isHighlighted ? 'text-white/90' : 'text-gray-500'}`}>
-                          <div className="flex items-center gap-1">
-                            <Calendar className="w-4 h-4" />
-                            <span className="text-sm">
-                              {membership.duration_months} month{membership.duration_months !== 1 ? 's' : ''}
-                            </span>
-                          </div>
-                        </div>
-                      )}
                     </div>
                     <p className={`text-sm mt-2 ${isHighlighted ? 'text-white/80' : 'text-gray-500'}`}>
                       {isUpgrade 
                         ? `Add affiliate access to your learner membership`
-                        : `${formatPrice(displayPrice / membership.duration_months, membership.currency)} per month`
+                        : (isLifetime 
+                          ? 'Get both learner and affiliate access in one package'
+                          : `${formatPrice(displayPrice / membership.duration_months, membership.currency)} per month`
+                        )
                       }
                     </p>
                   </div>
@@ -459,10 +473,47 @@ export default function LearnerMembershipPage() {
                   {/* Description */}
                   <p className={`mb-6 ${isHighlighted ? 'text-white/95' : 'text-gray-600'}`}>
                     {isUpgrade 
-                      ? 'Unlock affiliate features: earn commissions by promoting courses, access affiliate dashboard, and track your earnings.'
-                      : (membership.description || 'Full access to our learning platform')
+                      ? 'Unlock lifetime affiliate features: earn commissions by promoting courses, access affiliate dashboard, and track your earnings.'
+                      : (isLifetime 
+                        ? 'Get lifetime access to affiliate features including commission tracking and promotional materials.'
+                        : (membership.description || 'Full access to our learning platform')
+                      )
                     }
                   </p>
+
+                  {/* Pricing Clarification for Affiliate Memberships */}
+                  {isLifetime && !isUpgrade && (
+                    <div className={`mb-6 p-4 rounded-lg ${
+                      isHighlighted 
+                        ? 'bg-white/10 border border-white/20' 
+                        : 'bg-purple-50 border border-purple-200'
+                    }`}>
+                      <h4 className={`font-semibold mb-2 ${isHighlighted ? 'text-white' : 'text-purple-900'}`}>
+                        💰 Pricing Breakdown
+                      </h4>
+                      <div className={`space-y-1 text-sm ${isHighlighted ? 'text-white/90' : 'text-purple-700'}`}>
+                        <div className="flex justify-between">
+                          <span>Learner Membership:</span>
+                          <span>$10/year</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Affiliate Lifetime Access:</span>
+                          <span>$7 one-time</span>
+                        </div>
+                        <div className={`pt-2 mt-2 border-t ${
+                          isHighlighted ? 'border-white/20' : 'border-purple-300'
+                        }`}>
+                          <div className="flex justify-between font-semibold">
+                            <span>Total Bundle Price:</span>
+                            <span>${displayPrice}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <p className={`text-xs mt-3 ${isHighlighted ? 'text-white/80' : 'text-purple-600'}`}>
+                        💡 Tip: If you already have learner membership, you can upgrade to affiliate for just $7!
+                      </p>
+                    </div>
+                  )}
 
                   {/* Features */}
                   <ul className="space-y-4 mb-8">
@@ -471,8 +522,16 @@ export default function LearnerMembershipPage() {
                       'Access affiliate dashboard',
                       'Track earnings and analytics',
                       'Promotional materials provided',
-                      'Dedicated affiliate support'
-                    ] : membership.features).map((feature, featureIndex) => (
+                      'Dedicated affiliate support',
+                      'Lifetime access - no renewal fees'
+                    ] : (isLifetime ? [
+                      'Earn commissions on course sales',
+                      'Access affiliate dashboard',
+                      'Track earnings and analytics',
+                      'Promotional materials provided',
+                      'Dedicated affiliate support',
+                      'Lifetime access - no renewal fees'
+                    ] : membership.features)).map((feature, featureIndex) => (
                       <li key={featureIndex} className="flex items-start gap-3">
                         <div className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center mt-0.5 ${
                           isHighlighted 
@@ -499,7 +558,8 @@ export default function LearnerMembershipPage() {
                     }`}
                   >
                     {loadingPlan === membership.id ? 'Processing...' : (
-                      isUpgrade ? `Upgrade for ${membership.currency === 'GHS' ? '₵' : membership.currency === 'NGN' ? '₦' : '$'}${displayPrice}` : `Get ${membership.name}`
+                      isUpgrade ? `Get Affiliate for ${membership.currency === 'GHS' ? '₵' : membership.currency === 'NGN' ? '₦' : '$'}${displayPrice}` : 
+                      (isLifetime ? `Get Bundle for ${membership.currency === 'GHS' ? '₵' : membership.currency === 'NGN' ? '₦' : '$'}${displayPrice}` : `Get ${membership.name}`)
                     )}
                   </button>
                 </div>
@@ -564,6 +624,118 @@ export default function LearnerMembershipPage() {
             </a>
           </p>
         </div>
+
+        {/* Membership Details Modal */}
+        {showDetailsModal && selectedMembership && (
+          <div className="fixed inset-0 backdrop-blur-sm bg-black/30 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+              <div className="p-6 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-2xl font-bold text-gray-900">
+                    {selectedMembership.membership_packages.name}
+                  </h2>
+                  <button
+                    onClick={handleCloseDetailsModal}
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-6">
+                {/* Membership Type Badge */}
+                <div className="mb-6">
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    selectedMembership.membership_packages.member_type === 'learner' 
+                      ? 'bg-[#ed874a]/20 text-[#ed874a]' 
+                      : 'bg-purple-100 text-purple-700'
+                  }`}>
+                    {selectedMembership.membership_packages.member_type === 'learner' ? 'Learner' : 'Affiliate'} Membership
+                  </span>
+                </div>
+
+                {/* Description */}
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Description</h3>
+                  <p className="text-gray-600">
+                    {selectedMembership.membership_packages.description || 'No description available'}
+                  </p>
+                </div>
+
+                {/* Pricing */}
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Pricing</h3>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-bold text-gray-900">
+                      {selectedMembership.membership_packages.currency === 'GHS' ? '₵' : 
+                       selectedMembership.membership_packages.currency === 'NGN' ? '₦' : '$'}
+                      {selectedMembership.membership_packages.price.toLocaleString()}
+                    </span>
+                    <span className="text-gray-500">
+                      {selectedMembership.membership_packages.duration_months === 12 
+                        ? 'per year' 
+                        : `for ${selectedMembership.membership_packages.duration_months} month${selectedMembership.membership_packages.duration_months !== 1 ? 's' : ''}`
+                      }
+                    </span>
+                  </div>
+                </div>
+
+                {/* Features */}
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Features</h3>
+                  <ul className="space-y-2">
+                    {selectedMembership.membership_packages.features.map((feature, index) => (
+                      <li key={index} className="flex items-start gap-3">
+                        <Check className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                        <span className="text-gray-700">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* Membership Period */}
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Membership Period</h3>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Started:</span>
+                      <span className="text-gray-900 font-medium">{formatDate(selectedMembership.started_at)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">
+                        {selectedMembership.membership_packages.member_type === 'affiliate' && hasLifetimeAffiliateAccess 
+                          ? 'Expires:' 
+                          : 'Expires:'
+                        }
+                      </span>
+                      <span className="text-gray-900 font-medium">
+                        {selectedMembership.membership_packages.member_type === 'affiliate' && hasLifetimeAffiliateAccess 
+                          ? 'Never (Lifetime Access)' 
+                          : formatDate(selectedMembership.expires_at)
+                        }
+                      </span>
+                    </div>
+                    {selectedMembership.membership_packages.member_type === 'learner' && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Days Remaining:</span>
+                        <span className={`font-medium ${
+                          getDaysUntilExpiry(selectedMembership.expires_at) <= 30 
+                            ? 'text-orange-600' 
+                            : 'text-green-600'
+                        }`}>
+                          {getDaysUntilExpiry(selectedMembership.expires_at)} days
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -15,7 +15,6 @@ import {
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import AffiliateDashboardLayout from '@/components/dashboard/AffiliateDashboardLayout'
 import { useAffiliateData } from '@/lib/hooks/useAffiliateData'
 
 const WithdrawalHistoryPage = () => {
@@ -144,7 +143,7 @@ const WithdrawalHistoryPage = () => {
   }
 
   return (
-    <AffiliateDashboardLayout title="Withdrawal History">
+    <div className="space-y-6">
       {/* Filters */}
       <Card className="mb-6">
         <CardContent className="p-6">
@@ -266,8 +265,7 @@ const WithdrawalHistoryPage = () => {
           )}
         </CardContent>
       </Card>
-
-    </AffiliateDashboardLayout>
+    </div>
   )
 }
 

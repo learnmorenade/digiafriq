@@ -8,12 +8,14 @@ import { usePathname } from 'next/navigation';
 interface MembershipStatus {
   hasLearnerMembership: boolean;
   hasAffiliateMembership: boolean;
+  hasLifetimeAffiliateAccess: boolean;
   activeMemberships: Array<{
     id: string;
     membershipName: string;
     membershipType: 'learner' | 'affiliate';
     expiresAt: string;
     isActive: boolean;
+    isLifetimeAccess?: boolean;
   }>;
   loading: boolean;
   error: string | null;
@@ -26,6 +28,7 @@ export function useMembershipStatus(): MembershipStatus {
   const [status, setStatus] = useState<MembershipStatus>({
     hasLearnerMembership: false,
     hasAffiliateMembership: false,
+    hasLifetimeAffiliateAccess: false,
     activeMemberships: [],
     loading: true,
     error: null,
@@ -39,6 +42,7 @@ export function useMembershipStatus(): MembershipStatus {
         ...prev,
         hasLearnerMembership: false,
         hasAffiliateMembership: false,
+        hasLifetimeAffiliateAccess: false,
         activeMemberships: [],
         loading: false,
         error: 'User not authenticated',
@@ -52,15 +56,16 @@ export function useMembershipStatus(): MembershipStatus {
         .from('profiles')
         .select('role')
         .eq('id', user.id)
-        .single();
+        .single() as any;
 
-      // Get active memberships
+      // Get active memberships and lifetime affiliate access
       const { data: memberships, error } = await supabase
         .from('user_memberships')
         .select(`
           id,
           is_active,
           expires_at,
+          affiliate_lifetime_access,
           membership_packages (
             id,
             name,
@@ -68,8 +73,7 @@ export function useMembershipStatus(): MembershipStatus {
           )
         `)
         .eq('user_id', user.id)
-        .eq('is_active', true)
-        .gt('expires_at', new Date().toISOString());
+        .eq('is_active', true) as any;
 
       if (error) {
         console.error('Error fetching membership status:', error);
@@ -77,6 +81,7 @@ export function useMembershipStatus(): MembershipStatus {
           ...prev,
           hasLearnerMembership: false,
           hasAffiliateMembership: false,
+          hasLifetimeAffiliateAccess: false,
           activeMemberships: [],
           loading: false,
           error: error.message,
@@ -84,22 +89,44 @@ export function useMembershipStatus(): MembershipStatus {
         return;
       }
 
-      const activeMemberships = (memberships || []).map(m => ({
+      const activeMemberships = (memberships || []).filter((m: any) => {
+        const isActive = m.is_active;
+        const isExpired = new Date(m.expires_at) <= new Date();
+        const isLifetimeAccess = m.affiliate_lifetime_access;
+        
+        // Include if:
+        // 1. Active and not expired
+        // 2. Has lifetime access (even if expired)
+        return isActive && (!isExpired || isLifetimeAccess);
+      }).map((m: any) => ({
         id: m.id,
         membershipName: m.membership_packages?.name || 'Unknown',
         membershipType: m.membership_packages?.member_type || 'learner',
         expiresAt: m.expires_at,
-        isActive: m.is_active
+        isActive: m.is_active,
+        isLifetimeAccess: m.affiliate_lifetime_access || false
       }));
 
-      const hasLearnerMembership = activeMemberships.some(m => m.membershipType === 'learner');
-      const hasAffiliateMembership = activeMemberships.some(m => m.membershipType === 'affiliate') || 
-                                   profile?.role === 'affiliate';
+      // Check for active learner membership (must not be expired)
+      const hasLearnerMembership = activeMemberships.some((m: any) => 
+        m.membershipType === 'learner' && !m.isLifetimeAccess && new Date(m.expiresAt) > new Date()
+      );
+      
+      // Check for affiliate membership (active or lifetime)
+      const hasAffiliateMembership = activeMemberships.some((m: any) => 
+        m.membershipType === 'affiliate' && (m.isLifetimeAccess || new Date(m.expiresAt) > new Date())
+      ) || profile?.role === 'affiliate';
+      
+      // Check for lifetime affiliate access specifically
+      const hasLifetimeAffiliateAccess = activeMemberships.some((m: any) => 
+        m.membershipType === 'affiliate' && m.isLifetimeAccess
+      );
 
       setStatus(prev => ({
         ...prev,
         hasLearnerMembership,
         hasAffiliateMembership,
+        hasLifetimeAffiliateAccess,
         activeMemberships,
         loading: false,
         error: null,
@@ -111,9 +138,10 @@ export function useMembershipStatus(): MembershipStatus {
         ...prev,
         hasLearnerMembership: false,
         hasAffiliateMembership: false,
+        hasLifetimeAffiliateAccess: false,
         activeMemberships: [],
         loading: false,
-        error: 'Failed to fetch membership status',
+        error: err instanceof Error ? err.message : 'Unknown error occurred',
       }));
     }
   }, [user]);

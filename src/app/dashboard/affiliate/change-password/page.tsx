@@ -12,7 +12,6 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import AffiliateDashboardLayout from '@/components/dashboard/AffiliateDashboardLayout'
 import Link from 'next/link'
 
 const ChangePasswordPage = () => {
@@ -124,8 +123,7 @@ const ChangePasswordPage = () => {
                      validation.hasSpecialChar
 
   return (
-    <AffiliateDashboardLayout title="Change Password">
-      <div className="max-w-2xl mx-auto">
+    <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="mb-6">
           <Link href="/dashboard/affiliate/profile">
@@ -308,7 +306,6 @@ const ChangePasswordPage = () => {
           </CardContent>
         </Card>
       </div>
-    </AffiliateDashboardLayout>
   )
 }
 

@@ -1,27 +1,66 @@
 'use client';
 
-import { useAffiliatePaymentStatus } from '@/lib/hooks/useAffiliatePaymentStatus';
-import { useLearnerPaymentStatus } from '@/lib/hooks/useLearnerPaymentStatus';
+import { useMembershipStatus } from '@/lib/hooks/useMembershipStatus';
 import AffiliateDashboardLayout from '@/components/dashboard/AffiliateDashboardLayout';
 import AffiliateRequiresLearnerMembership from '@/components/AffiliateRequiresLearnerMembership';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Crown } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/supabase/auth';
+import React, { useState, useEffect } from 'react';
 
-export default function AffiliateLayout({
-  children,
-}: {
+interface AffiliateLayoutProps {
   children: React.ReactNode;
-}) {
-  const { hasPaid: affiliateHasPaid, loading: affiliateLoading } = useAffiliatePaymentStatus();
-  const { hasPaid: learnerHasPaid, loading: learnerLoading } = useLearnerPaymentStatus();
+}
+
+const AffiliateLayout: React.FC<AffiliateLayoutProps> = ({ children }) => {
+  const router = useRouter();
+  const { user } = useAuth();
+  const { hasLearnerMembership, hasAffiliateMembership, loading: membershipLoading } = useMembershipStatus();
+  const [affiliatePackageId, setAffiliatePackageId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch affiliate packages
+  useEffect(() => {
+    const fetchAffiliatePackages = async () => {
+      try {
+        const response = await fetch('/api/memberships?member_type=affiliate')
+        if (response.ok) {
+          const data = await response.json()
+          // Use the first available affiliate package (like learner membership page does)
+          const affiliatePackages = data.packages || []
+          if (affiliatePackages.length > 0) {
+            setAffiliatePackageId(affiliatePackages[0].id)
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch affiliate packages:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchAffiliatePackages()
+  }, [])
+
+  const handleUpgradeClick = () => {
+    if (affiliatePackageId) {
+      // Go directly to checkout for the $7 package
+      router.push(`/dashboard/learner/membership/checkout?membershipId=${affiliatePackageId}&upgrade=true`);
+    } else {
+      // Fallback to membership page if package not found
+      router.push('/dashboard/learner/membership');
+    }
+  };
 
   // Show loading state within dashboard layout
-  if (affiliateLoading || learnerLoading) {
+  if (membershipLoading || loading) {
     return (
       <AffiliateDashboardLayout>
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
             <Loader2 className="w-12 h-12 animate-spin text-[#ed874a] mx-auto mb-4" />
-            <p className="text-gray-600">Loading...</p>
+            <p className="text-gray-600">Checking membership status...</p>
           </div>
         </div>
       </AffiliateDashboardLayout>
@@ -29,7 +68,7 @@ export default function AffiliateLayout({
   }
 
   // First check: User must have learner membership to access affiliate features
-  if (!learnerHasPaid) {
+  if (!hasLearnerMembership) {
     return (
       <AffiliateDashboardLayout>
         <AffiliateRequiresLearnerMembership />
@@ -37,59 +76,51 @@ export default function AffiliateLayout({
     );
   }
 
-  // Second check: If user has learner membership but hasn't paid affiliate fee, show affiliate payment page
-  if (!affiliateHasPaid) {
+  // Second check: If user has learner membership but no affiliate membership, show upgrade prompt
+  if (hasLearnerMembership && !hasAffiliateMembership) {
     return (
       <AffiliateDashboardLayout>
         <div className="p-6">
-          {/* Pending Payment Content */}
           <div className="max-w-2xl mx-auto">
-            <div className="bg-white rounded-2xl shadow-xl border border-orange-100 p-8 text-center">
+            <div className="bg-white rounded-2xl shadow-xl border border-purple-100 p-8 text-center">
               {/* Illustration */}
               <div className="mb-8 flex justify-center">
-                <div className="relative">
-                  {/* Phone illustration with money symbols */}
-                  <div className="w-48 h-48 bg-gradient-to-br from-orange-100 via-orange-50 to-orange-100 rounded-full flex items-center justify-center relative">
-                    <div className="w-32 h-40 bg-white rounded-2xl shadow-lg flex items-center justify-center border-4 border-[#ed874a] relative">
-                      <div className="text-4xl">📱</div>
-                      {/* Money symbols floating around */}
-                      <div className="absolute -top-4 -right-4 text-2xl animate-bounce">💰</div>
-                      <div className="absolute -bottom-2 -left-4 text-xl animate-pulse">💵</div>
-                      <div className="absolute top-0 -left-6 text-lg animate-bounce delay-100">❤️</div>
-                      <div className="absolute -top-2 right-8 text-xl animate-pulse delay-200">💸</div>
-                    </div>
-                    {/* Decorative elements */}
-                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-[#ed874a] rounded-full opacity-20"></div>
-                    <div className="absolute bottom-4 right-0 w-20 h-20 bg-orange-400 rounded-full opacity-30"></div>
-                  </div>
+                <div className="w-48 h-48 bg-gradient-to-br from-purple-100 to-purple-50 rounded-full flex items-center justify-center">
+                  <Crown className="w-24 h-24 text-purple-600" />
                 </div>
               </div>
 
               {/* Heading */}
               <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
-                You don&apos;t have an affiliate link yet
+                Upgrade to Affiliate
               </h1>
 
               {/* Description */}
               <p className="text-gray-600 text-base md:text-lg mb-8 max-w-xl mx-auto leading-relaxed">
-                Discover the world of affiliate marketing and find a variety of digital products to promote and earn money or give a creator your email to become their affiliate.
+                You have an active learner membership! Upgrade to affiliate for just $7 and start earning commissions on course sales.
               </p>
 
-              {/* Action Buttons */}
-              <div className="space-y-4 max-w-md mx-auto">
-                {/* Access Marketplace Button */}
-                <button
-                  onClick={() => window.location.href = '/dashboard/affiliate/network'}
-                  className="w-full px-6 py-4 bg-gradient-to-r from-[#ed874a] to-orange-500 text-white rounded-lg hover:from-orange-600 hover:to-orange-600 transition-all duration-200 font-semibold text-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
+              {/* Price Display */}
+              <div className="mb-8 p-6 bg-purple-50 rounded-xl border border-purple-200">
+                <div className="text-sm text-purple-700 font-medium mb-2">💰 Special Upgrade Price</div>
+                <div className="text-3xl font-bold text-purple-900 mb-1">$7</div>
+                <div className="text-sm text-purple-600">One-time payment for lifetime access</div>
+              </div>
+
+              {/* Action Button */}
+              <div className="max-w-md mx-auto">
+                <Button
+                  onClick={handleUpgradeClick}
+                  className="w-full px-8 py-4 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-200"
                 >
-                  Complete Payment to Get Started
-                </button>
+                  Upgrade for $7
+                </Button>
               </div>
 
               {/* Additional Info */}
-              <div className="mt-8 pt-6 border-t border-orange-100">
+              <div className="mt-8 pt-6 border-t border-purple-100">
                 <p className="text-sm text-gray-500">
-                  Complete your payment to unlock your affiliate dashboard and start earning commissions.
+                  Complete your upgrade to unlock your affiliate dashboard and start earning commissions.
                 </p>
               </div>
             </div>
@@ -99,6 +130,8 @@ export default function AffiliateLayout({
     );
   }
 
-  // Otherwise, render the requested page within dashboard layout (user has paid and has affiliate access)
+  // Otherwise, render the requested page within dashboard layout (user has both memberships)
   return <AffiliateDashboardLayout>{children}</AffiliateDashboardLayout>;
 }
+
+export default AffiliateLayout;

@@ -44,7 +44,7 @@ export function useAffiliatePaymentStatus(): AffiliatePaymentStatus {
         const { data, error } = await supabase
           .from('affiliate_profiles')
           .select('has_paid, payment_date, payment_amount, payment_reference')
-          .eq('user_id', user.id)
+          .eq('id', user.id)  // Changed from user_id to id
           .maybeSingle() as { 
             data: { 
               has_paid: boolean; 

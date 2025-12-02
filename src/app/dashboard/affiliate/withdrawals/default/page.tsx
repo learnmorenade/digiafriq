@@ -13,7 +13,6 @@ import {
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import AffiliateDashboardLayout from '@/components/dashboard/AffiliateDashboardLayout'
 
 const DefaultWithdrawalPage = () => {
   const [selectedMethod, setSelectedMethod] = useState('bank')
@@ -68,7 +67,7 @@ const DefaultWithdrawalPage = () => {
   }
 
   return (
-    <AffiliateDashboardLayout title="Default Withdrawal Settings">
+    <div className="space-y-6">
       {/* Current Settings Overview */}
       <Card className="mb-8">
         <CardContent className="p-6">
@@ -296,7 +295,7 @@ const DefaultWithdrawalPage = () => {
           </div>
         </CardContent>
       </Card>
-    </AffiliateDashboardLayout>
+    </div>
   )
 }
 

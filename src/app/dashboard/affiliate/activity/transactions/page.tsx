@@ -16,7 +16,6 @@ import {
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import AffiliateDashboardLayout from '@/components/dashboard/AffiliateDashboardLayout'
 import { useAffiliateData } from '@/lib/hooks/useAffiliateData'
 
 const TransactionsPage = () => {
@@ -223,8 +222,7 @@ const TransactionsPage = () => {
   }
 
   return (
-    <AffiliateDashboardLayout title="Transaction History">
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-800">Transaction History</h1>
@@ -419,7 +417,6 @@ const TransactionsPage = () => {
         </CardContent>
       </Card>
       </div>
-    </AffiliateDashboardLayout>
   )
 }
 

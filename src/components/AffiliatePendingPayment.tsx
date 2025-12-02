@@ -7,7 +7,7 @@ export default function AffiliatePendingPayment() {
   const router = useRouter();
 
   const handleAccessMarketplace = () => {
-    router.push('/dashboard/affiliate/network');
+    router.push('/dashboard/affiliate');
   };
 
   const handleAddBankDetails = () => {
