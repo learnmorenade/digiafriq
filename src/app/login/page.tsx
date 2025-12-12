@@ -46,6 +46,9 @@ const LoginPage = () => {
           if (userRole === 'learner' && hasLearnerMembership) {
             // Learner with active membership - go directly to dashboard
             router.push('/dashboard/learner')
+          } else if (userRole === 'learner' && !hasLearnerMembership) {
+            // Learner without membership - go to membership page to purchase
+            router.push('/dashboard/learner/membership')
           } else if (userRole === 'affiliate') {
             // Affiliate - go to affiliate dashboard
             router.push('/dashboard/affiliate')
@@ -53,7 +56,7 @@ const LoginPage = () => {
             // Admin - go to admin dashboard
             router.push('/dashboard/admin')
           } else {
-            // No role or no membership - go to role selection
+            // No role - go to role selection
             router.push('/choose-role')
           }
         } catch (error) {
@@ -86,11 +89,39 @@ const LoginPage = () => {
     }
 
     try {
+      // First check if user has set password
+      const statusResponse = await fetch('/api/auth/check-password-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      })
+      
+      const statusData = await statusResponse.json()
+      
+      if (statusData.exists && !statusData.passwordSet && statusData.paymentStatus === 'paid') {
+        // User has paid but hasn't set password yet
+        setError('You haven\'t finished setting up your account. Redirecting to password creation...')
+        setTimeout(() => {
+          router.push(`/create-password?email=${encodeURIComponent(email)}`)
+        }, 2000)
+        setLoading(false)
+        return
+      }
+
       const { error: signInError } = await signIn(email, password)
 
       if (signInError) {
         console.error('Sign-in error:', signInError)
-        setError(signInError.message || 'Failed to sign in. Please check your credentials.')
+        
+        // Check if error is due to no password set
+        if (signInError.message?.includes('Invalid login credentials') && statusData.exists && statusData.paymentStatus === 'paid') {
+          setError('Please complete your account setup by creating a password.')
+          setTimeout(() => {
+            router.push(`/create-password?email=${encodeURIComponent(email)}`)
+          }, 2000)
+        } else {
+          setError(signInError.message || 'Failed to sign in. Please check your credentials.')
+        }
         setLoading(false)
         return
       }

@@ -170,6 +170,10 @@ const LearnerDashboardLayout = ({ children, title = "Dashboard" }: LearnerDashbo
   const activeRole = (profile as any)?.active_role || profile?.role
   const hasAffiliateRole = availableRoles.includes('affiliate')
 
+  // Auto-select learner role when on learner dashboard pages
+  const isOnLearnerDashboard = pathname.startsWith('/dashboard/learner')
+  const displayActiveRole = isOnLearnerDashboard ? 'learner' : activeRole
+
   const handleRoleSwitch = async (role: 'learner' | 'affiliate') => {
     if (role === activeRole || switchingRole) return
 
@@ -231,24 +235,24 @@ const LearnerDashboardLayout = ({ children, title = "Dashboard" }: LearnerDashbo
           <div className="space-y-2">
             <button
               onClick={() => handleRoleSwitch('learner')}
-              disabled={switchingRole || activeRole === 'learner'}
+              disabled={switchingRole || displayActiveRole === 'learner'}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-                activeRole === 'learner'
+                displayActiveRole === 'learner'
                   ? 'bg-white border-2 border-[#ed874a] text-[#ed874a] shadow-sm'
                   : 'bg-white border border-gray-200 text-gray-700 hover:border-gray-300 hover:shadow-sm'
               } ${switchingRole ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <GraduationCap className="w-4 h-4" />
               <span className="flex-1 text-left">E-Learning</span>
-              {activeRole === 'learner' && <div className="w-2 h-2 rounded-full bg-[#ed874a]"></div>}
-              {switchingRole && activeRole !== 'learner' && <Loader2 className="w-4 h-4 animate-spin" />}
+              {displayActiveRole === 'learner' && <div className="w-2 h-2 rounded-full bg-[#ed874a]"></div>}
+              {switchingRole && displayActiveRole !== 'learner' && <Loader2 className="w-4 h-4 animate-spin" />}
             </button>
 
             <button
               onClick={() => handleRoleSwitch('affiliate')}
-              disabled={switchingRole || activeRole === 'affiliate'}
+              disabled={switchingRole || displayActiveRole === 'affiliate'}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-                activeRole === 'affiliate'
+                displayActiveRole === 'affiliate'
                   ? 'bg-white border-2 border-[#ed874a] text-[#ed874a] shadow-sm'
                   : hasAffiliateRole
                   ? 'bg-white border border-gray-200 text-gray-700 hover:border-gray-300 hover:shadow-sm'
@@ -257,8 +261,8 @@ const LearnerDashboardLayout = ({ children, title = "Dashboard" }: LearnerDashbo
             >
               <Briefcase className="w-4 h-4" />
               <span className="flex-1 text-left">Affiliate Dashboard</span>
-              {activeRole === 'affiliate' && <div className="w-2 h-2 rounded-full bg-[#ed874a]"></div>}
-              {switchingRole && activeRole !== 'affiliate' && <Loader2 className="w-4 h-4 animate-spin" />}
+              {displayActiveRole === 'affiliate' && <div className="w-2 h-2 rounded-full bg-[#ed874a]"></div>}
+              {switchingRole && displayActiveRole !== 'affiliate' && <Loader2 className="w-4 h-4 animate-spin" />}
             </button>
           </div>
         </div>

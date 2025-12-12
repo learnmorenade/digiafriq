@@ -133,7 +133,14 @@ export const useAffiliateData = (): AffiliateDashboardData => {
         setAffiliateProfile(affiliateProfileData)
       } else {
         console.warn('Failed to fetch affiliate profile, using defaults')
-        affiliateProfileData = { total_earnings: 0, total_referrals: 0, commission_rate: 100 } as AffiliateProfile
+        affiliateProfileData = { 
+          total_earnings: 0, 
+          available_balance: 0,
+          lifetime_referrals: 0,
+          active_referrals: 0,
+          total_referrals: 0,
+          commission_rate: 80 
+        } as AffiliateProfile
         setAffiliateProfile(affiliateProfileData)
       }
 
@@ -159,16 +166,12 @@ export const useAffiliateData = (): AffiliateDashboardData => {
 
       // Calculate stats with fallback values
       const totalEarnings = affiliateProfileData?.total_earnings || 0
-      const totalReferrals = affiliateProfileData?.total_referrals || 0
-      const commissionRate = affiliateProfileData?.commission_rate || 100
+      const currentBalance = affiliateProfileData?.available_balance || 0
+      const totalReferrals = affiliateProfileData?.lifetime_referrals || affiliateProfileData?.total_referrals || 0
+      const commissionRate = affiliateProfileData?.commission_rate || 80
 
       const totalSales = commissions.length || 0
       const pendingCommissions = commissions.filter((c: any) => c.status === 'pending').length || 0
-      
-      // Calculate current balance (simplified calculation)
-      const approvedCommissions = commissions.filter((c: any) => c.status === 'approved').reduce((sum: number, c: any) => sum + (c.amount || 0), 0)
-      const totalPayouts = payouts.filter((p: any) => p.status === 'completed').reduce((sum: number, p: any) => sum + (p.amount || 0), 0)
-      const currentBalance = Math.max(0, approvedCommissions - totalPayouts)
 
       setStats({
         totalEarnings,

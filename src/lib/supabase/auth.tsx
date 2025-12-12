@@ -480,9 +480,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               id: session.user.id,
               email: session.user.email!,
               full_name: session.user.user_metadata?.full_name || null,
-              role: defaultRole as 'learner' | 'affiliate',
-              active_role: defaultRole as 'learner' | 'affiliate',
-              available_roles: [defaultRole as 'learner' | 'affiliate'],
+              role: 'learner',
+              active_role: 'learner',
+              available_roles: ['learner'],
               country: userData.country || null,
               phone: userData.phoneNumber || null
             }

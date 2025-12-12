@@ -708,8 +708,8 @@ async function handlePaymentSuccess(paymentData: any, provider: string) {
       throw new Error(`Failed to update payment: ${updateError.message}`)
     }
 
-    // Create user membership if this is a membership payment
-    if (payment.payment_type === 'membership') {
+    // Create user membership if this is a membership payment or addon upgrade
+    if (payment.payment_type === 'membership' || payment.payment_type === 'addon_upgrade') {
       await createMembership(payment)
     }
 
@@ -811,44 +811,78 @@ async function createMembership(payment: any) {
       throw new Error('Membership package not found')
     }
 
-    // Calculate expiry date
-    const expiryDate = new Date()
-    expiryDate.setDate(expiryDate.getDate() + membershipPackage.duration_days)
+    // Check if this is an addon upgrade (not a new membership)
+    const metadata = payment.metadata || {}
+    const isAddonUpgrade = metadata.is_addon_upgrade === true
+    const hasDCSAddon = metadata.has_digital_cashflow_addon === true
 
-    // Create user membership
-    const { error: membershipError } = await supabase
-      .from('user_memberships')
-      .insert({
-        user_id: payment.user_id,
-        membership_package_id: payment.membership_package_id,
-        payment_id: payment.id,
-        status: 'active',
-        start_date: new Date().toISOString(),
-        expiry_date: expiryDate.toISOString(),
-        auto_renew: false
+    if (isAddonUpgrade) {
+      // UPDATE existing membership with DCS addon
+      console.log('Processing DCS addon upgrade for user:', payment.user_id)
+      
+      const { error: updateError } = await supabase
+        .from('user_memberships')
+        .update({
+          has_digital_cashflow_addon: true
+        })
+        .eq('user_id', payment.user_id)
+        .eq('is_active', true)
+
+      if (updateError) {
+        throw new Error(`Failed to update membership with DCS addon: ${updateError.message}`)
+      }
+
+      console.log('DCS addon added to existing membership successfully', { 
+        userId: payment.user_id,
+        paymentId: payment.id
       })
 
-    if (membershipError) {
-      throw new Error(`Failed to create membership: ${membershipError.message}`)
-    }
+    } else {
+      // CREATE new membership
+      console.log('Creating new membership for user:', payment.user_id)
+      
+      // Calculate expiry date
+      const expiryDate = new Date()
+      expiryDate.setDate(expiryDate.getDate() + membershipPackage.duration_days)
 
-    // Update user role if it's an affiliate membership
-    if (membershipPackage.member_type === 'affiliate') {
-      await supabase
-        .from('profiles')
-        .update({ active_role: 'affiliate' })
-        .eq('id', payment.user_id)
-    }
+      // Create user membership with DCS addon flag
+      const { error: membershipError } = await supabase
+        .from('user_memberships')
+        .insert({
+          user_id: payment.user_id,
+          membership_package_id: payment.membership_package_id,
+          payment_id: payment.id,
+          status: 'active',
+          is_active: true,
+          start_date: new Date().toISOString(),
+          expires_at: expiryDate.toISOString(),
+          auto_renew: false,
+          has_digital_cashflow_addon: hasDCSAddon
+        })
 
-    console.log('Membership created successfully', { 
-      userId: payment.user_id,
-      packageId: payment.membership_package_id,
-      paymentId: payment.id
-    })
+      if (membershipError) {
+        throw new Error(`Failed to create membership: ${membershipError.message}`)
+      }
+
+      // Update user role if it's an affiliate membership
+      if (membershipPackage.member_type === 'affiliate') {
+        await supabase
+          .from('profiles')
+          .update({ role: 'affiliate' })
+          .eq('id', payment.user_id)
+      }
+
+      console.log('Membership created successfully', { 
+        userId: payment.user_id,
+        packageId: payment.membership_package_id,
+        paymentId: payment.id,
+        hasDCSAddon: hasDCSAddon
+      })
+    }
 
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    console.error('Error creating membership:', errorMessage)
+    console.error('Error creating/updating membership:', errorMessage)
     throw error
   }
 }

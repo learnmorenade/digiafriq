@@ -16,6 +16,7 @@ interface PaymentVerification {
   amount?: number;
   currency?: string;
   reference?: string;
+  isAddonUpgrade?: boolean;
 }
 
 export default function PaymentCallbackPage() {
@@ -80,6 +81,9 @@ export default function PaymentCallbackPage() {
         console.log('Payment verification response:', data);
 
         if (data.success && data.payment) {
+          // Check if this is an addon upgrade
+          const isAddonUpgrade = data.payment.payment_type === 'addon_upgrade';
+
           // Payment successful - get membership details
           const { data: membershipData, error: membershipError } = await supabase
             .from('membership_packages')
@@ -97,15 +101,24 @@ export default function PaymentCallbackPage() {
             membershipName: (membershipData as any)?.name,
             amount: data.payment.amount,
             currency: data.payment.currency,
-            reference: paymentRef
+            reference: paymentRef,
+            isAddonUpgrade
           });
 
           console.log('🔥 TOAST: Showing success toast, instanceId:', instanceId);
-          toast.success('Payment verified successfully!');
+          if (isAddonUpgrade) {
+            toast.success('🎉 Digital Cashflow System unlocked!');
+          } else {
+            toast.success('Payment verified successfully!');
+          }
 
           // Redirect after 3 seconds
           setTimeout(() => {
-            redirectToAppropriateDashboard((membershipData as any)?.member_type || 'learner');
+            if (isAddonUpgrade) {
+              router.push('/dashboard/learner/membership');
+            } else {
+              redirectToAppropriateDashboard((membershipData as any)?.member_type || 'learner');
+            }
           }, 3000);
 
         } else {
@@ -180,16 +193,21 @@ export default function PaymentCallbackPage() {
             </h2>
             <div className="bg-green-50/50 border border-green-200/70 rounded-lg p-6 mb-6">
               <h3 className="font-semibold text-green-700 mb-2">
-                {verification.membershipName} Activated
+                {verification.isAddonUpgrade ? '🎉 Digital Cashflow System Unlocked!' : `${verification.membershipName} Activated`}
               </h3>
               <div className="text-sm text-green-700 space-y-1">
-                <p><strong>Type:</strong> {verification.membershipType?.charAt(0).toUpperCase()}{verification.membershipType?.slice(1)} Membership</p>
+                {!verification.isAddonUpgrade && (
+                  <p><strong>Type:</strong> {verification.membershipType?.charAt(0).toUpperCase()}{verification.membershipType?.slice(1)} Membership</p>
+                )}
                 <p><strong>Amount:</strong> {verification.currency} {verification.amount}</p>
                 <p><strong>Reference:</strong> {verification.reference}</p>
               </div>
             </div>
             <p className="text-gray-600 mb-4">
-              Redirecting you to your {verification.membershipType} dashboard...
+              {verification.isAddonUpgrade 
+                ? 'Redirecting you to your membership page...'
+                : `Redirecting you to your ${verification.membershipType} dashboard...`
+              }
             </p>
             <div className="flex justify-center">
               <div className="animate-pulse flex space-x-1">

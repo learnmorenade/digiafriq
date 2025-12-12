@@ -29,6 +29,21 @@ interface MembershipPackage {
   member_type: 'learner' | 'affiliate'
   is_active: boolean
   features: string[]
+  has_digital_cashflow?: boolean
+  digital_cashflow_price?: number
+}
+
+type MembershipInsert = {
+  name: string
+  description: string
+  price: number
+  currency: string
+  duration_months: number
+  member_type: 'learner' | 'affiliate'
+  is_active: boolean
+  features: string[]
+  has_digital_cashflow: boolean
+  digital_cashflow_price: number
 }
 
 interface MembershipFormPageProps {
@@ -64,7 +79,35 @@ export default function MembershipFormPage({
   const [courses, setCourses] = useState<Course[]>([])
   const [learnerMemberships, setLearnerMemberships] = useState<MembershipPackage[]>([])
 
-  const [formData, setFormData] = useState({
+  interface MembershipFormData {
+    name: string
+    description: string
+    price: string
+    currency: string
+    duration_months: string
+    member_type: 'learner' | 'affiliate'
+    is_active: boolean
+    features: string[]
+    selectedCourses: string[]
+    selectedPromotions: string[]
+    has_digital_cashflow: boolean
+    digital_cashflow_price: number
+  }
+
+  type MembershipInsert = {
+    name: string
+    description: string
+    price: number
+    currency: string
+    duration_months: number
+    member_type: 'learner' | 'affiliate'
+    is_active: boolean
+    features: string[]
+    has_digital_cashflow: boolean
+    digital_cashflow_price: number
+  }
+
+  const [formData, setFormData] = useState<MembershipFormData>({
     name: '',
     description: '',
     price: '',
@@ -75,6 +118,8 @@ export default function MembershipFormPage({
     features: [] as string[],
     selectedCourses: [] as string[],
     selectedPromotions: [] as string[],
+    has_digital_cashflow: false,
+    digital_cashflow_price: 7,
   })
 
   const [newFeature, setNewFeature] = useState('')
@@ -109,6 +154,8 @@ export default function MembershipFormPage({
         features: membership.features || [],
         selectedCourses: [],
         selectedPromotions: [],
+        has_digital_cashflow: membership.has_digital_cashflow ?? false,
+        digital_cashflow_price: membership.digital_cashflow_price ?? 7
       })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -269,6 +316,12 @@ export default function MembershipFormPage({
       toast.error('Valid member type is required')
       return false
     }
+    // Validate digital cashflow price if enabled
+    if (formData.has_digital_cashflow && (!formData.digital_cashflow_price || formData.digital_cashflow_price < 0)) {
+      toast.error('Valid digital cashflow price is required')
+      return false
+    }
+
     return true
   }
 
@@ -291,7 +344,7 @@ export default function MembershipFormPage({
         console.warn('Could not verify session before save. Proceeding anyway.', err)
       }
 
-      const membershipData = {
+      const membershipData: MembershipInsert = {
         name: formData.name.trim(),
         description: formData.description.trim(),
         price: parseFloat(formData.price),
@@ -300,6 +353,8 @@ export default function MembershipFormPage({
         member_type: formData.member_type || 'learner', // Ensure member_type is never empty
         is_active: formData.is_active,
         features: formData.features,
+        has_digital_cashflow: formData.has_digital_cashflow,
+        digital_cashflow_price: formData.digital_cashflow_price
       }
 
       let membershipId: string
@@ -495,6 +550,39 @@ export default function MembershipFormPage({
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Features & Benefits</CardTitle>
+            {formData.member_type === 'learner' && (
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="has_digital_cashflow"
+                    checked={formData.has_digital_cashflow}
+                    onCheckedChange={(checked) => handleInputChange('has_digital_cashflow', checked)}
+                  />
+                  <div className="space-y-1">
+                    <Label htmlFor="has_digital_cashflow" className="font-medium">Digital Cashflow System Add-on</Label>
+                    <p className="text-sm text-gray-500">Unlock affiliate features and earn 80% commission + 20% recurring yearly commission on learner renewals</p>
+                  </div>
+                </div>
+                {formData.has_digital_cashflow && (
+                  <div className="ml-6">
+                    <Label htmlFor="digital_cashflow_price">Add-on Price</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        id="digital_cashflow_price"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.digital_cashflow_price}
+                        onChange={(e) => handleInputChange('digital_cashflow_price', parseFloat(e.target.value))}
+                        placeholder="0.00"
+                        className="w-32"
+                      />
+                      <span className="text-sm text-gray-500">{formData.currency}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex gap-2">

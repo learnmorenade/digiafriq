@@ -177,11 +177,11 @@ class PaymentProviderFactory {
 // Currency conversion utilities
 class CurrencyConverter {
   static async getExchangeRate(fromCurrency: string, toCurrency: string): Promise<number> {
-    // Comprehensive exchange rates for all supported currencies
+    // Comprehensive exchange rates for all supported currencies (Dec 2024)
     const fixedRates: Record<string, number> = {
       // USD to other currencies
       'USD-GHS': 10.0,
-      'USD-NGN': 1400.0,
+      'USD-NGN': 852.94,
       'USD-KES': 129.4,
       'USD-ZAR': 17.0,
       'USD-XOF': 560.0,
@@ -190,7 +190,7 @@ class CurrencyConverter {
       
       // Other currencies to USD (reverse rates)
       'GHS-USD': 0.1,
-      'NGN-USD': 0.000714,
+      'NGN-USD': 0.001172,
       'KES-USD': 0.007727,
       'ZAR-USD': 0.058824,
       'XOF-USD': 0.001786,
@@ -641,18 +641,23 @@ class KoraProvider extends PaymentProvider {
         };
       }
 
-      console.log('🔍 Kora API Response:', response);
+      console.log('🔍 Kora API Response:', JSON.stringify(response, null, 2));
 
       // Kora response structure uses checkout_url
       const paymentUrl = response.data?.checkout_url || response.data?.payment_url || response.checkout_url || response.payment_url;
       
-      this.logTransaction('payment_initialized', { reference, payment_url: paymentUrl });
+      // IMPORTANT: Use Kora's reference if provided, otherwise use our generated reference
+      // Kora returns the reference in response.data.reference
+      const koraReference = response.data?.reference || reference;
+      console.log('🔍 Kora reference:', { ourReference: reference, koraReference, usingReference: koraReference });
+      
+      this.logTransaction('payment_initialized', { reference: koraReference, payment_url: paymentUrl });
 
       return {
         success: true,
         authorization_url: paymentUrl,
         access_code: response.data?.access_code,
-        reference,
+        reference: koraReference, // Use Kora's reference for verification
         provider: 'kora',
       };
     } catch (error: unknown) {
@@ -821,19 +826,76 @@ serve(async (req) => {
   }
 
   try {
-    const { data: { user }, error: authError } = await supabase.auth.getUser(
-      req.headers.get('Authorization')!.replace('Bearer ', '')
-    )
+    const requestBody = await req.json()
+    console.log('🔍 Received request body:', JSON.stringify(requestBody, null, 2))
+    
+    const { membership_package_id, payment_type, payment_provider, metadata } = requestBody
 
-    if (authError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    console.log('🔍 Extracted values:', {
+      membership_package_id,
+      payment_type,
+      payment_provider,
+      metadata_keys: metadata ? Object.keys(metadata) : 'null',
+      is_referral_signup: metadata?.is_referral_signup
+    })
+
+    // Check if this is a referral payment (no auth required)
+    const isReferralPayment = payment_type === 'referral_membership' || metadata?.is_referral_signup
+    console.log('🔍 Referral payment detection:', {
+      payment_type,
+      payment_type_match: payment_type === 'referral_membership',
+      is_referral_signup: metadata?.is_referral_signup,
+      isReferralPayment
+    })
+    
+    let user = null
+    let userCountry = 'GH' // Default to Ghana
+
+    if (!isReferralPayment) {
+      console.log('🔒 Processing as authenticated payment')
+      // Regular authenticated payment flow
+      const authHeader = req.headers.get('Authorization')
+      if (!authHeader) {
+        console.error('❌ Missing authorization header for regular payment')
+        return new Response(
+          JSON.stringify({ error: 'Authorization header required for regular payments' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(
+        authHeader.replace('Bearer ', '')
       )
+
+      if (authError || !authUser) {
+        console.error('❌ Authentication failed:', authError)
+        return new Response(
+          JSON.stringify({ error: 'Unauthorized' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      user = authUser
+
+      // Get user profile for country detection
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('country')
+        .eq('id', user.id)
+        .single()
+
+      userCountry = profile?.country || 'GH'
+    } else {
+      console.log('🔗 Processing as referral payment (no auth required)')
+      // Referral payment flow - use country from metadata
+      userCountry = metadata?.country || 'Ghana'
+      console.log('🔗 Processing referral payment:', {
+        referralCode: metadata?.referral_code,
+        referralType: metadata?.referral_type,
+        customerEmail: metadata?.email,
+        country: userCountry
+      })
     }
-
-    const { membership_package_id, payment_type, payment_provider, metadata } = await req.json()
-
     // Validate request
     if (!membership_package_id || !payment_type) {
       return new Response(
@@ -841,23 +903,13 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
-
-    // Get user profile for country detection
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('country')
-      .eq('id', user.id)
-      .single()
-
-    const userCountry = profile?.country || 'GH' // Default to Ghana
     
     console.log('🌍 Country detection details:', {
-      profileCountryRaw: profile?.country,
-      profileCountryType: typeof profile?.country,
       detectedCountry: userCountry,
       countryCodeUpper: userCountry?.toUpperCase(),
       countryCodeLower: userCountry?.toLowerCase(),
-      countryLength: userCountry?.length
+      countryLength: userCountry?.length,
+      isReferralPayment
     });
     
     // Validate provider selection
@@ -904,7 +956,16 @@ serve(async (req) => {
     }
 
     // Convert USD price to appropriate currency based on provider
+    // Use metadata.usd_price if provided (includes addon), otherwise fall back to package price
     const usdPrice = metadata?.usd_price || membershipPackage.price;
+    
+    console.log('💵 USD Price calculation:', {
+      metadata_usd_price: metadata?.usd_price,
+      membershipPackage_price: membershipPackage.price,
+      final_usdPrice: usdPrice,
+      has_digital_cashflow_addon: metadata?.has_digital_cashflow_addon,
+      addon_price: metadata?.addon_price
+    });
     
     let finalAmount: number;
     let paymentCurrency: string;
@@ -959,31 +1020,36 @@ serve(async (req) => {
       : Deno.env.get('KORA_SECRET_KEY')!
 
     // Create payment record
+    const paymentData: any = {
+      membership_package_id,
+      amount: finalAmount,
+      currency: paymentCurrency,
+      base_currency_amount: usdPrice, // USD base amount (includes addon if selected)
+      payment_provider: selectedProvider,
+      payment_type,
+      status: 'pending',
+      exchange_rate: conversionRate,
+      metadata: {
+        ...metadata,
+        country: userCountry,
+        conversion_details: {
+          original_amount: usdPrice,
+          original_currency: 'USD',
+          converted_amount: finalAmount,
+          converted_currency: paymentCurrency,
+          exchange_rate: conversionRate
+        }
+      }
+    }
+
+    // Add user_id only for authenticated payments
+    if (user) {
+      paymentData.user_id = user.id
+    }
+
     const { data: payment, error: paymentError } = await supabase
       .from('payments')
-      .insert({
-        user_id: user.id,
-        membership_package_id,
-        amount: finalAmount,
-        currency: paymentCurrency,
-        base_currency_amount: membershipPackage.price, // USD base amount for analytics
-        payment_provider: selectedProvider,
-        payment_type,
-        status: 'pending',
-        exchange_rate: conversionRate,
-        metadata: {
-          ...metadata,
-          usd_price: usdPrice,
-          original_currency: 'USD',
-          usd_amount: usdPrice, // Original USD amount
-          user_country: userCountry,
-          user_currency: userCurrency,
-          payment_currency: paymentCurrency,
-          selected_provider: selectedProvider,
-          available_providers: availableProviders,
-          provider_currency_logic: selectedProvider === 'paystack' ? 'Always GHS' : `User local currency (${userCurrency})`,
-        }
-      })
+      .insert(paymentData)
       .select()
       .single()
 
@@ -994,18 +1060,32 @@ serve(async (req) => {
     // Initialize payment with provider
     const provider = PaymentProviderFactory.create(selectedProvider, { apiKey: providerKey })
     
+    // Use customer email from metadata for referral payments, user email for regular payments
+    const customerEmail = isReferralPayment ? metadata?.email : user?.email
+    
+    // Determine callback URL based on whether this is a guest/referral payment
+    const siteUrl = Deno.env.get('SITE_URL') || Deno.env.get('NEXT_PUBLIC_SITE_URL') || 'http://localhost:3000'
+    const callbackPath = isReferralPayment ? '/payment/guest-callback' : '/payment/callback'
+    const callbackUrl = `${siteUrl}${callbackPath}`
+    
+    console.log('🔗 Callback URL:', { isReferralPayment, callbackUrl })
+    
     const paymentResponse = await provider.initializePayment({
-      email: user.email!,
+      email: customerEmail!,
       amount: amountInSmallestUnit,
       currency: paymentCurrency,
       metadata: {
         payment_id: payment.id,
-        user_id: user.id,
         membership_package_id,
         reference: payment.reference,
+        is_guest: isReferralPayment, // Flag for guest checkout
+        guest_email: isReferralPayment ? customerEmail : undefined,
+        guest_name: isReferralPayment ? metadata?.full_name : undefined,
+        guest_country: isReferralPayment ? userCountry : undefined,
+        ...(user && { user_id: user.id }), // Only include user_id if user exists
         ...metadata,
       },
-      callback_url: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/payment/callback`
+      callback_url: callbackUrl
     })
 
     if (!paymentResponse.success) {

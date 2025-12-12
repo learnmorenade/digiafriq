@@ -1,5 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { createCommission, completeReferral } from '@/lib/supabase/referrals'
+import { 
+  createAccountAfterPayment, 
+  checkExistingAccount, 
+  sendMagicLinkToExistingUser,
+  type AccountCreationData 
+} from '@/lib/auth/account-creation'
+import { 
+  generateWelcomeEmailHTML, 
+  generateWelcomeEmailText,
+  type WelcomeEmailData 
+} from '@/lib/email/templates'
 
 // Use service role client for payment verification (bypasses RLS)
 const supabase = createClient(
@@ -106,12 +118,16 @@ class KoraProvider implements PaymentProvider {
     }
 
     // Normalize Kora response to match our expected format
+    // Kora uses 'successful' while Paystack uses 'success' - normalize to 'success'
+    const koraStatus = data.data.status?.toLowerCase();
+    const normalizedStatus = (koraStatus === 'successful' || koraStatus === 'success') ? 'success' : koraStatus;
+    
     const normalizedResponse = {
       status: true, // Kora returns 200 for successful API calls
       message: 'Verification successful',
       data: {
         ...data.data,
-        status: data.data.status, // success, failed, pending
+        status: normalizedStatus, // Normalized to 'success' for consistency
         reference: data.data.reference || reference,
         amount: data.data.amount,
         currency: data.data.currency,
@@ -139,6 +155,147 @@ class PaymentProviderFactory {
   }
 }
 
+// Helper function to process commission creation for referrals
+async function processReferralCommissions(payment: any, verificationData: any) {
+  console.log('🔗 Checking for referral commissions...')
+  
+  try {
+    // Check if this user was referred
+    const { data: referral, error: referralError } = await supabase
+      .from('referrals')
+      .select('*')
+      .eq('referred_id', payment.user_id)
+      .eq('status', 'pending')
+      .single() as any
+
+    if (referralError || !referral) {
+      console.log('ℹ️ No pending referral found for user')
+      return
+    }
+
+    console.log('✅ Found referral:', referral)
+
+    // Get membership package details to determine commission type
+    const { data: membershipPackage, error: packageError } = await supabase
+      .from('membership_packages')
+      .select('member_type, name')
+      .eq('id', payment.membership_package_id)
+      .single() as any
+
+    if (packageError || !membershipPackage) {
+      console.error('❌ Failed to get membership package details:', packageError)
+      return
+    }
+
+    console.log('📦 Membership package:', membershipPackage)
+
+    let commissionType: 'learner_referral' | 'affiliate_referral' = 'learner_referral'
+    let notes = `Commission for ${membershipPackage.name} purchase`
+
+    // Determine commission type based on referral type and membership type
+    if (referral.referral_type === 'affiliate' && membershipPackage.member_type === 'affiliate') {
+      commissionType = 'affiliate_referral'
+      notes = `Commission for affiliate referral purchasing ${membershipPackage.name}`
+    } else if (referral.referral_type === 'learner' && membershipPackage.member_type === 'learner') {
+      commissionType = 'learner_referral'
+      notes = `Commission for learner referral purchasing ${membershipPackage.name}`
+    } else {
+      console.log('ℹ️ No commission applicable for this referral/membership combination')
+      return
+    }
+
+    // Create commission for the referrer
+    console.log(`💰 Creating ${commissionType} commission for referrer ${referral.referrer_id}`)
+    
+    const commission = await createCommission(
+      referral.referrer_id,
+      referral.id,
+      payment.id,
+      commissionType,
+      notes
+    )
+
+    if (commission) {
+      console.log('✅ Commission created successfully:', commission)
+
+      // Special handling for affiliate referrals - create additional $2 commission (in USD)
+      if (commissionType === 'affiliate_referral') {
+        console.log('💰 Creating additional $2 USD commission for affiliate referral')
+        
+        // Create a separate commission for the $2 affiliate upgrade fee (always in USD)
+        const { error: affiliateCommissionError } = await supabase
+          .from('commissions')
+          .insert({
+            affiliate_id: referral.referrer_id,
+            referral_id: referral.id,
+            payment_id: payment.id,
+            commission_type: 'affiliate_referral',
+            commission_amount: 2.00,
+            commission_currency: 'USD', // Always USD
+            commission_rate: 0,
+            base_amount: 2.00,
+            base_currency: 'USD', // Always USD
+            status: 'available',
+            notes: '$2 USD bonus for affiliate referral upgrade'
+          }) as any
+
+        if (affiliateCommissionError) {
+          console.error('❌ Failed to create $2 affiliate commission:', affiliateCommissionError)
+        } else {
+          console.log('✅ $2 USD affiliate commission created successfully')
+        }
+      }
+
+      // Mark referral as completed
+      const referralCompleted = await completeReferral(referral.id)
+      if (referralCompleted) {
+        console.log('✅ Referral marked as completed')
+      } else {
+        console.error('❌ Failed to mark referral as completed')
+      }
+    } else {
+      console.error('❌ Failed to create commission')
+    }
+
+  } catch (commissionError) {
+    console.error('❌ Error processing referral commissions:', commissionError)
+    // Don't fail the payment verification if commission processing fails
+  }
+}
+
+// Helper function to send welcome email
+async function sendWelcomeEmail(emailData: WelcomeEmailData): Promise<boolean> {
+  try {
+    console.log('📧 Sending welcome email to:', emailData.email)
+    
+    // Generate email content for magic link flow
+    const htmlContent = generateWelcomeEmailHTML(emailData)
+    const textContent = generateWelcomeEmailText(emailData)
+    
+    console.log('📧 Email HTML content generated (length):', htmlContent.length)
+    console.log('📧 Email text content generated (length):', textContent.length)
+    
+    // TODO: Integrate with actual email service
+    // Example with a hypothetical email service:
+    /*
+    const emailService = new EmailService(process.env.EMAIL_API_KEY)
+    await emailService.send({
+      to: emailData.email,
+      subject: `Welcome to DigiafrIQ - Check Your Email for Login Link!`,
+      html: htmlContent,
+      text: textContent
+    })
+    */
+    
+    console.log('✅ Welcome email prepared successfully (email service integration needed)')
+    return true
+    
+  } catch (error) {
+    console.error('❌ Error sending welcome email:', error)
+    return false
+  }
+}
+
 // Helper function to process membership creation
 async function processMembershipCreation(payment: any, verificationData: any) {
   console.log('🎉 PAYMENT VERIFICATION COMPLETED SUCCESSFULLY')
@@ -149,114 +306,296 @@ async function processMembershipCreation(payment: any, verificationData: any) {
     membership_package_id: payment.membership_package_id
   })
 
-  // Create user membership record
-  const membershipPackageId = verificationData.data?.metadata?.membership_package_id || payment.membership_package_id
+  // Get customer email and name from verification data
+  const customerEmail = verificationData.data?.customer?.email
+  const customerName = verificationData.data?.customer?.first_name 
+    ? `${verificationData.data.customer.first_name} ${verificationData.data.customer.last_name || ''}`.trim()
+    : verificationData.data?.customer?.email?.split('@')[0] || 'User'
+
+  console.log('👤 Customer info:', { email: customerEmail, name: customerName })
+
+  // Get referral data from payment metadata
+  const referralCode = verificationData.data?.metadata?.referral_code
+  const referralType = verificationData.data?.metadata?.referral_type as 'learner' | 'affiliate' | undefined
+
+  console.log('🔗 Referral info:', { referralCode, referralType })
+
+  // Get membership package details - prioritize payment record over verification metadata
+  // This is important because Kora doesn't return metadata in verification response like Paystack does
+  const membershipPackageId = payment.membership_package_id || verificationData.data?.metadata?.membership_package_id
   console.log('🎫 Membership package ID:', membershipPackageId)
+  console.log('🔍 Source: payment record =', payment.membership_package_id, ', verification metadata =', verificationData.data?.metadata?.membership_package_id)
   
-  if (membershipPackageId) {
-    try {
-      console.log('🔍 Looking up membership package details for ID:', membershipPackageId)
-      
-      // Get membership package details
-      const { data: membershipPackage, error: membershipError } = await supabase
-        .from('membership_packages')
-        .select('duration_months, member_type')
-        .eq('id', membershipPackageId)
-        .maybeSingle() as any
-
-      console.log('📊 Membership package query result:', {
-        packageFound: !!membershipPackage,
-        packageError: membershipError?.message,
-        packageDetails: membershipPackage
-      })
-
-      if (!membershipError && membershipPackage) {
-        console.log('✅ Membership package found:', {
-          duration_months: membershipPackage.duration_months,
-          member_type: membershipPackage.member_type
-        })
-        
-        // Calculate expiry date
-        const startDate = new Date()
-        const expiryDate = new Date()
-        expiryDate.setMonth(expiryDate.getMonth() + membershipPackage.duration_months)
-
-        console.log('📅 Creating user membership:', {
-          user_id: payment.user_id,
-          membership_package_id: membershipPackageId,
-          payment_id: payment.id,
-          start_date: startDate.toISOString(),
-          expiry_date: expiryDate.toISOString()
-        })
-
-        // Create user membership with lifetime access for affiliate
-        const membershipData: any = {
-          user_id: payment.user_id,
-          membership_package_id: membershipPackageId,
-          payment_id: payment.id,
-          started_at: startDate.toISOString(),
-          expires_at: expiryDate.toISOString(),
-          is_active: true
-        };
-
-        // Add lifetime access for affiliate memberships
-        if (membershipPackage.member_type === 'affiliate') {
-          membershipData.affiliate_lifetime_access = true;
-          console.log('👑 Lifetime affiliate access granted');
-        }
-
-        const { error: membershipCreateError } = await supabase
-          .from('user_memberships')
-          .insert(membershipData) as any
-
-        if (membershipCreateError) {
-          console.error('❌ DATABASE ERROR: Failed to create user membership:', membershipCreateError)
-          console.error('❌ Full membership creation error:', JSON.stringify(membershipCreateError, null, 2))
-        } else {
-          console.log('✅ User membership created successfully')
-        }
-
-        // Update user role based on membership type
-        if (membershipPackage.member_type === 'affiliate') {
-          console.log('👑 Affiliate membership detected, updating user role...')
-          
-          const { error: roleUpdateError } = await supabase
-            .from('profiles')
-            .update({ role: 'affiliate' })
-            .eq('id', payment.user_id) as any
-
-          if (roleUpdateError) {
-            console.error('❌ DATABASE ERROR: Failed to update user role:', roleUpdateError)
-            console.error('❌ Full role update error:', JSON.stringify(roleUpdateError, null, 2))
-          } else {
-            console.log('✅ User role updated to affiliate successfully')
-          }
-        } else {
-          console.log('🎓 Learner membership detected, no role update needed')
-        }
-      } else {
-        console.error('❌ DATABASE ERROR: Failed to fetch membership package:', membershipError)
-        console.error('❌ Full package error:', JSON.stringify(membershipError, null, 2))
-      }
-    } catch (membershipError) {
-      console.error('❌ ERROR: Exception during membership processing:', membershipError)
-      console.error('❌ Full membership exception:', JSON.stringify(membershipError, null, 2))
-    }
-  } else {
-    console.log('⚠️ WARNING: No membership package ID found')
+  if (!membershipPackageId) {
+    console.error('❌ No membership package ID found in payment record or verification metadata')
+    return NextResponse.json({
+      success: false,
+      message: 'Missing membership package information'
+    }, { status: 400 })
   }
 
-  return NextResponse.json({
-    success: true,
-    message: 'Payment verified successfully',
-    payment: {
-      id: payment.id,
-      amount: payment.amount,
-      currency: payment.currency,
-      status: 'completed',
-      membership_package_id: payment.membership_package_id || null
+  try {
+    console.log('🔍 Looking up membership package details for ID:', membershipPackageId)
+    
+    // Get membership package details
+    const { data: membershipPackage, error: membershipError } = await supabase
+      .from('membership_packages')
+      .select('duration_months, member_type, name')
+      .eq('id', membershipPackageId)
+      .maybeSingle() as any
+
+    console.log('📊 Membership package query result:', {
+      packageFound: !!membershipPackage,
+      packageError: membershipError?.message,
+      packageDetails: membershipPackage
+    })
+
+    if (membershipError || !membershipPackage) {
+      console.error('❌ Failed to get membership package details:', membershipError)
+      return NextResponse.json({
+        success: false,
+        message: 'Invalid membership package'
+      }, { status: 400 })
     }
-  })
+
+    console.log('✅ Membership package found:', {
+      duration_months: membershipPackage.duration_months,
+      member_type: membershipPackage.member_type,
+      name: membershipPackage.name
+    })
+
+    // Check if account already exists
+    let userId = payment.user_id
+    let accountCreated = false
+    let magicLinkSent = false
+
+    if (!userId && customerEmail) {
+      console.log('🔍 No user_id in payment, checking if account exists for email:', customerEmail)
+      
+      const accountExists = await checkExistingAccount(customerEmail)
+      
+      if (accountExists) {
+        console.log('✅ Account exists, sending magic link for membership upgrade')
+        
+        const magicLinkSuccess = await sendMagicLinkToExistingUser(
+          customerEmail,
+          membershipPackage.member_type,
+          referralCode,
+          referralType
+        )
+        
+        if (!magicLinkSuccess) {
+          console.error('❌ Failed to send magic link to existing user')
+          return NextResponse.json({
+            success: false,
+            message: 'Failed to send login link to existing account'
+          }, { status: 500 })
+        }
+        
+        console.log('✅ Magic link sent to existing user')
+        magicLinkSent = true
+      } else {
+        console.log('🆕 Creating new account with magic link after payment')
+        
+        const accountData: AccountCreationData = {
+          email: customerEmail,
+          fullName: customerName,
+          membershipType: membershipPackage.member_type,
+          referralCode,
+          referralType
+        }
+        
+        const createdAccount = await createAccountAfterPayment(accountData)
+        
+        if (!createdAccount) {
+          console.error('❌ Failed to create account after payment')
+          return NextResponse.json({
+            success: false,
+            message: 'Failed to create user account'
+          }, { status: 500 })
+        }
+        
+        console.log('✅ Account created successfully:', {
+          userId: createdAccount.userId,
+          email: createdAccount.email,
+          magicLinkSent: createdAccount.magicLinkSent
+        })
+        
+        userId = createdAccount.userId
+        accountCreated = true
+        magicLinkSent = createdAccount.magicLinkSent
+        
+        // Update payment with user_id
+        const { error: paymentUpdateError } = await supabase
+          .from('payments')
+          .update({ user_id: userId })
+          .eq('id', payment.id) as any
+          
+        if (paymentUpdateError) {
+          console.error('❌ Failed to update payment with user_id:', paymentUpdateError)
+        } else {
+          console.log('✅ Payment updated with user_id')
+        }
+      }
+    }
+
+    if (!userId) {
+      console.error('❌ No user ID available for membership creation')
+      return NextResponse.json({
+        success: false,
+        message: 'User identification failed'
+      }, { status: 400 })
+    }
+
+    // Create user membership record
+    const startDate = new Date()
+    const expiryDate = new Date()
+    expiryDate.setMonth(expiryDate.getMonth() + membershipPackage.duration_months)
+
+    console.log('📅 Creating user membership:', {
+      user_id: userId,
+      membership_package_id: membershipPackageId,
+      payment_id: payment.id,
+      start_date: startDate.toISOString(),
+      expiry_date: expiryDate.toISOString()
+    })
+
+    // Check if this is an addon upgrade or new membership
+    // IMPORTANT: Prioritize payment record metadata over provider metadata (Kora doesn't return metadata)
+    const paymentMetadata = payment.metadata || {}
+    const providerMetadata = verificationData.data?.metadata || {}
+    const metadata = { ...providerMetadata, ...paymentMetadata } // Payment record takes precedence
+    
+    // Also check payment_type column for addon_upgrade
+    const isAddonUpgrade = payment.payment_type === 'addon_upgrade' || 
+                           metadata.is_addon_upgrade === true || 
+                           metadata.is_addon_upgrade === 'true'
+    const hasDCSAddon = metadata.has_digital_cashflow_addon === true || 
+                        metadata.has_digital_cashflow_addon === 'true'
+
+    console.log('🔍 Addon detection:', { 
+      isAddonUpgrade, 
+      hasDCSAddon, 
+      paymentType: payment.payment_type,
+      paymentMetadata,
+      providerMetadata 
+    })
+
+    if (isAddonUpgrade) {
+      // UPDATE existing membership with DCS addon
+      console.log('🔄 Processing DCS addon upgrade for user:', userId)
+      
+      const { error: updateError } = await supabase
+        .from('user_memberships')
+        .update({
+          has_digital_cashflow_addon: true
+        })
+        .eq('user_id', userId)
+        .eq('is_active', true)
+
+      if (updateError) {
+        console.error('❌ DATABASE ERROR: Failed to update membership with DCS addon:', updateError)
+        console.error('❌ Full addon update error:', JSON.stringify(updateError, null, 2))
+      } else {
+        console.log('✅ DCS addon added to existing membership successfully')
+      }
+    } else {
+      // CREATE new membership
+      const membershipData: any = {
+        user_id: userId,
+        membership_package_id: membershipPackageId,
+        payment_id: payment.id,
+        started_at: startDate.toISOString(),
+        expires_at: expiryDate.toISOString(),
+        is_active: true,
+        has_digital_cashflow_addon: hasDCSAddon
+      };
+
+      // Add lifetime access for affiliate memberships
+      if (membershipPackage.member_type === 'affiliate') {
+        membershipData.affiliate_lifetime_access = true;
+        console.log('👑 Lifetime affiliate access granted');
+      }
+
+      console.log('📝 Creating membership with data:', membershipData)
+
+      const { error: membershipCreateError } = await supabase
+        .from('user_memberships')
+        .insert(membershipData) as any
+
+      if (membershipCreateError) {
+        console.error('❌ DATABASE ERROR: Failed to create user membership:', membershipCreateError)
+        console.error('❌ Full membership creation error:', JSON.stringify(membershipCreateError, null, 2))
+      } else {
+        console.log('✅ User membership created successfully with DCS addon:', hasDCSAddon)
+      }
+    }
+
+    // Update user role based on membership type (for existing users)
+    if (membershipPackage.member_type === 'affiliate') {
+      console.log('👑 Affiliate membership detected, updating user role...')
+      
+      const { error: roleUpdateError } = await supabase
+        .from('profiles')
+        .update({ role: 'affiliate' })
+        .eq('id', userId) as any
+
+      if (roleUpdateError) {
+        console.error('❌ DATABASE ERROR: Failed to update user role:', roleUpdateError)
+        console.error('❌ Full role update error:', JSON.stringify(roleUpdateError, null, 2))
+      } else {
+        console.log('✅ User role updated to affiliate successfully')
+      }
+    } else {
+      console.log('🎓 Learner membership detected, no role update needed')
+    }
+
+    // Send welcome email if account was created
+    if (accountCreated && customerEmail) {
+      console.log('📧 Sending welcome email explaining magic link process')
+      
+      const emailData: WelcomeEmailData = {
+        fullName: customerName,
+        email: customerEmail,
+        membershipType: membershipPackage.member_type,
+        magicLinkSent: true
+      }
+      
+      const emailSent = await sendWelcomeEmail(emailData)
+      if (emailSent) {
+        console.log('✅ Welcome email sent successfully')
+      } else {
+        console.error('❌ Failed to send welcome email (non-critical)')
+      }
+    }
+
+    // Process referral commissions
+    await processReferralCommissions(payment, verificationData)
+
+    return NextResponse.json({
+      success: true,
+      message: 'Payment verified successfully',
+      accountCreated,
+      magicLinkSent,
+      payment: {
+        id: payment.id,
+        amount: payment.amount,
+        currency: payment.currency,
+        status: 'completed',
+        membership_package_id: membershipPackageId
+      }
+    })
+
+  } catch (membershipError) {
+    console.error('❌ ERROR: Exception during membership processing:', membershipError)
+    console.error('❌ Full membership exception:', JSON.stringify(membershipError, null, 2))
+    
+    return NextResponse.json({
+      success: false,
+      message: 'Membership creation failed',
+      details: membershipError instanceof Error ? membershipError.message : 'Unknown error'
+    }, { status: 500 })
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -297,6 +636,8 @@ export async function POST(request: NextRequest) {
             status,
             provider_reference,
             payment_provider,
+            payment_type,
+            metadata,
             created_at
           `)
           .eq('provider_reference', reference)
@@ -340,6 +681,8 @@ export async function POST(request: NextRequest) {
               status,
               provider_reference,
               payment_provider,
+              payment_type,
+              metadata,
               created_at
             `)
             .eq('user_id', user_id)
@@ -410,11 +753,17 @@ export async function POST(request: NextRequest) {
         let verificationData = null
         let providerUsed = null
 
+        // Helper to check if payment status indicates success (handles both 'success' and 'successful')
+        const isPaymentSuccessful = (status: string | undefined) => {
+          const normalizedStatus = status?.toLowerCase();
+          return normalizedStatus === 'success' || normalizedStatus === 'successful';
+        };
+
         // Try Paystack first
         try {
           const paystackProvider = PaymentProviderFactory.create('paystack')
           verificationData = await paystackProvider.verifyTransaction(reference)
-          if (verificationData.status && verificationData.data.status === 'success') {
+          if (verificationData.status && isPaymentSuccessful(verificationData.data.status)) {
             providerUsed = 'paystack'
             console.log('✅ Transaction found in Paystack')
           }
@@ -423,11 +772,11 @@ export async function POST(request: NextRequest) {
         }
 
         // If Paystack failed, try Kora
-        if (!verificationData || !verificationData.status || verificationData.data.status !== 'success') {
+        if (!verificationData || !verificationData.status || !isPaymentSuccessful(verificationData.data.status)) {
           try {
             const koraProvider = PaymentProviderFactory.create('kora')
             verificationData = await koraProvider.verifyTransaction(reference)
-            if (verificationData.status && verificationData.data.status === 'success') {
+            if (verificationData.status && isPaymentSuccessful(verificationData.data.status)) {
               providerUsed = 'kora'
               console.log('✅ Transaction found in Kora')
             }
@@ -436,7 +785,7 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        if (!verificationData || !verificationData.status) {
+        if (!verificationData || !verificationData.status || !providerUsed) {
           console.log('❌ VERIFICATION FAILED: Transaction not found in any provider')
           return NextResponse.json({
             success: false,
@@ -446,6 +795,7 @@ export async function POST(request: NextRequest) {
         }
 
         console.log('✅ VERIFICATION SUCCESSFUL with provider:', providerUsed)
+        console.log('✅ Payment status:', verificationData.data.status)
         
         // Create payment record as fallback
         const membershipPackageId = verificationData.data?.metadata?.membership_package_id
@@ -571,12 +921,18 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      if (!verificationData.status || verificationData.data.status !== 'success') {
+      // Check for successful payment - accept both 'success' and 'successful' (Kora uses 'successful')
+      const paymentStatus = verificationData.data.status?.toLowerCase();
+      const isSuccessful = paymentStatus === 'success' || paymentStatus === 'successful';
+      
+      if (!verificationData.status || !isSuccessful) {
         console.log('❌ PROVIDER VERIFICATION FAILED')
         console.log('❌ Provider response:', {
           status: verificationData.status,
           message: verificationData.message,
           dataStatus: verificationData.data.status,
+          normalizedStatus: paymentStatus,
+          isSuccessful,
           data: verificationData.data
         })
       

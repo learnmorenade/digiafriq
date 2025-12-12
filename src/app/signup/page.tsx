@@ -3,12 +3,13 @@ import React, { useState, useEffect, useRef, Suspense } from 'react'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Loader2, Eye, EyeOff, ArrowLeft, Check, X, Users, GraduationCap, Mail, ChevronDown } from 'lucide-react'
+import { Loader2, Eye, EyeOff, ArrowLeft, Check, X } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/lib/supabase/auth'
 import { supabase } from '@/lib/supabase/client'
+import { processReferral } from '@/lib/supabase/referrals'
 
 interface PasswordRequirement {
   text: string
@@ -19,9 +20,11 @@ function SignupPageInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirectParam = searchParams.get('redirect')
+  const referralCode = searchParams.get('ref')
+  const referralType = searchParams.get('type') as 'learner' | 'affiliate' | undefined
   const { signUp, updateProfile, addRole, switchRole } = useAuth()
   
-  const [step, setStep] = useState<'details' | 'password' | 'account-type'>('details')
+  const [step, setStep] = useState<'details' | 'password'>('details')
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -31,7 +34,7 @@ function SignupPageInner() {
     country: 'Ghana',
     countryCode: '+233',
     phoneNumber: '',
-    accountType: '' as 'learner' | 'affiliate' | ''
+    accountType: 'learner' as 'learner' | 'affiliate'
   })
 
   // Country data with codes and flag images from CDN - All payment-supported countries
@@ -73,9 +76,11 @@ function SignupPageInner() {
 
   // Password validation requirements
   const getPasswordRequirements = (password: string): PasswordRequirement[] => [
-    { text: 'Must contain 8 characters', met: password.length >= 8 },
-    { text: 'Must contain a letter', met: /[a-zA-Z]/.test(password) },
-    { text: 'Must contain a number', met: /\d/.test(password) }
+    { text: 'Minimum 8 characters', met: password.length >= 8 },
+    { text: 'At least 1 uppercase letter (A–Z)', met: /[A-Z]/.test(password) },
+    { text: 'At least 1 lowercase letter (a–z)', met: /[a-z]/.test(password) },
+    { text: 'At least 1 number (0–9)', met: /\d/.test(password) },
+    { text: 'At least 1 symbol (! @ # $ % ^ & *)', met: /[!@#$%^&*]/.test(password) }
   ]
 
   const passwordRequirements = getPasswordRequirements(formData.password)
@@ -150,7 +155,7 @@ function SignupPageInner() {
     setStep('password')
   }
 
-  const handlePasswordSubmit = (e: React.FormEvent) => {
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
     if (!formData.password) {
@@ -162,20 +167,18 @@ function SignupPageInner() {
       setError('Please ensure your password meets all requirements')
       return
     }
+
+    if (!passwordsMatch) {
+      setError('Passwords do not match')
+      return
+    }
     
     setError('')
-    setStep('account-type')
-  }
-
-  const handleAccountTypeSelect = (type: 'learner' | 'affiliate') => {
-    setFormData(prev => ({ ...prev, accountType: type }))
+    // Directly submit the form since all users are learners
+    await handleFinalSubmit()
   }
 
   const handleFinalSubmit = async () => {
-    if (!formData.accountType) {
-      setError('Please select an account type')
-      return
-    }
     
     setLoading(true)
     setError('')
@@ -258,7 +261,27 @@ function SignupPageInner() {
         // Continue anyway, role might already exist
       }
       
-      // Step 4: Switch to the selected role
+      // Step 4: Process referral if applicable
+      if (referralCode && referralType) {
+        console.log(`🔗 Processing referral: ${referralCode} (${referralType})`)
+        
+        try {
+          const { data: { user } } = await supabase.auth.getUser()
+          if (user) {
+            const referral = await processReferral(user.id, referralCode, referralType)
+            if (referral) {
+              console.log('✅ Referral processed successfully:', referral)
+            } else {
+              console.log('⚠️ Referral processing failed, but continuing signup')
+            }
+          }
+        } catch (referralError) {
+          console.error('❌ Error processing referral:', referralError)
+          // Don't fail the signup if referral processing fails
+        }
+      }
+      
+      // Step 5: Switch to the selected role
       console.log(`🔄 Switching to ${formData.accountType} role...`)
       const switchResult = await switchRole(formData.accountType)
       if (switchResult.error) {
@@ -266,11 +289,9 @@ function SignupPageInner() {
         // Continue anyway, will redirect to dashboard
       }
       
-      // Step 5: Redirect to appropriate dashboard based on role
+      // Step 6: Redirect to learner dashboard
       setError('')
-      const dashboardRoute = formData.accountType === 'affiliate' 
-        ? '/dashboard/affiliate' 
-        : '/dashboard/learner/membership'
+      const dashboardRoute = '/dashboard/learner'
       
       console.log(`🎉 Redirecting to dashboard: ${dashboardRoute}`)
       
@@ -294,17 +315,14 @@ function SignupPageInner() {
   const handleGoBack = () => {
     if (step === 'password') {
       setStep('details')
-    } else if (step === 'account-type') {
-      setStep('password')
     }
     setError('')
   }
 
   const getStepProgress = () => {
     switch (step) {
-      case 'details': return 33
-      case 'password': return 66
-      case 'account-type': return 100
+      case 'details': return 50
+      case 'password': return 100
       default: return 0
     }
   }
@@ -343,12 +361,6 @@ function SignupPageInner() {
             </div>
             <span className="ml-2 text-sm">Password</span>
           </div>
-          <div className={`flex items-center ${step === 'account-type' ? 'text-orange-600' : 'text-gray-400'}`}>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${step === 'account-type' ? 'bg-orange-600 text-white' : 'bg-gray-200'}`}>
-              3
-            </div>
-            <span className="ml-2 text-sm">Account Type</span>
-          </div>
         </div>
         <div className="w-full bg-gray-200 rounded-full h-2">
           <div 
@@ -363,7 +375,6 @@ function SignupPageInner() {
           <h2 className="text-xl font-semibold text-gray-900">
             {step === 'details' && 'Personal Information'}
             {step === 'password' && 'Create Password'}
-            {step === 'account-type' && 'Choose Account Type'}
           </h2>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -549,95 +560,18 @@ function SignupPageInner() {
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Back
                 </Button>
-                <Button type="submit" className="flex-1 bg-orange-600 hover:bg-orange-700">
-                  Continue
-                </Button>
-              </div>
-            </form>
-          )}
-
-          {step === 'account-type' && (
-            <div className="space-y-4">
-              <p className="text-sm text-gray-600 text-center mb-6">
-                Choose how you'd like to use Digiafriq
-              </p>
-
-              <div className="space-y-3">
-                <button
-                  onClick={() => handleAccountTypeSelect('learner')}
-                  className={`w-full p-4 rounded-lg border-2 transition-all ${
-                    formData.accountType === 'learner'
-                      ? 'border-orange-600 bg-orange-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
-                      <GraduationCap className="w-6 h-6 text-orange-600" />
-                    </div>
-                    <div className="flex-1 text-left">
-                      <h3 className="font-semibold text-gray-900">Learner</h3>
-                      <p className="text-sm text-gray-600">
-                        Learn digital skills and advance your career
-                      </p>
-                    </div>
-                    {formData.accountType === 'learner' && (
-                      <Check className="w-5 h-5 text-orange-600" />
-                    )}
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => handleAccountTypeSelect('affiliate')}
-                  className={`w-full p-4 rounded-lg border-2 transition-all ${
-                    formData.accountType === 'affiliate'
-                      ? 'border-orange-600 bg-orange-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
-                      <Users className="w-6 h-6 text-orange-600" />
-                    </div>
-                    <div className="flex-1 text-left">
-                      <h3 className="font-semibold text-gray-900">Affiliate</h3>
-                      <p className="text-sm text-gray-600">
-                        Earn 100% commission by referring others
-                      </p>
-                    </div>
-                    {formData.accountType === 'affiliate' && (
-                      <Check className="w-5 h-5 text-orange-600" />
-                    )}
-                  </div>
-                </button>
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleGoBack}
-                  className="flex-1"
-                >
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back
-                </Button>
-                <Button
-                  onClick={handleFinalSubmit}
-                  disabled={!formData.accountType || loading}
-                  className="flex-1 bg-orange-600 hover:bg-orange-700"
-                >
+                <Button type="submit" disabled={loading} className="flex-1 bg-orange-600 hover:bg-orange-700">
                   {loading ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Creating Account...
+                      Processing...
                     </>
                   ) : (
                     'Create Account'
                   )}
                 </Button>
               </div>
-            </div>
+            </form>
           )}
 
           {error && (

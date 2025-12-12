@@ -13,31 +13,40 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useAffiliateData } from '@/lib/hooks/useAffiliateData'
 import { useAuth } from '@/lib/supabase/auth'
+import { useReferralCode, useReferralStats, useCommissions } from '@/hooks/useReferrals'
+import { toast } from 'sonner'
 
 const AffiliateDashboard = () => {
-  const { stats, recentCommissions, recentPayouts, affiliateProfile, loading, error } = useAffiliateData()
+  const { stats: affiliateStats, recentCommissions, recentPayouts, affiliateProfile, loading: affiliateLoading, error } = useAffiliateData()
   const { user, profile } = useAuth()
+  const { stats: referralStats, loading: referralStatsLoading } = useReferralStats()
+  const { loading: commissionsLoading, getTotalEarnings, getAvailableEarnings } = useCommissions()
+  const { referralCode, loading: referralCodeLoading, generateUrls } = useReferralCode()
 
-  // Generate referral links using user UUID
-  const learnerReferralLink = user ? `https://digiafriq.com/ref/${user.id}` : 'Loading...'
-  const affiliateReferralLink = user ? `https://digiafriq.com/affiliate/ref/${user.id}` : 'Loading...'
+  const urls = generateUrls()
+
+  const totalEarnings = getTotalEarnings()
+  const currentBalanceValue = getAvailableEarnings()
+  const totalReferrals = referralStats.total_referrals
+
+  const loading = affiliateLoading || referralStatsLoading || commissionsLoading || referralCodeLoading
 
   // Copy to clipboard function
   const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text)
       // You could add a toast notification here
-      alert('Link copied to clipboard!')
+      toast.success('Link copied to clipboard!')
     } catch (err) {
       console.error('Failed to copy: ', err)
-      alert('Failed to copy link')
+      toast.error('Failed to copy link')
     }
   }
 
   const statsCards = [
     {
       title: "Current Balance",
-      value: loading ? "..." : `$${stats.currentBalance.toFixed(2)}`,
+      value: loading ? "..." : `$${currentBalanceValue.toFixed(2)}`,
       icon: DollarSign,
       color: "text-green-600",
       bgColor: "bg-green-50",
@@ -45,7 +54,7 @@ const AffiliateDashboard = () => {
     },
     {
       title: "Total Earnings", 
-      value: loading ? "..." : `$${stats.totalEarnings.toFixed(2)}`,
+      value: loading ? "..." : `$${totalEarnings.toFixed(2)}`,
       icon: TrendingUp,
       color: "text-blue-600",
       bgColor: "bg-blue-50", 
@@ -53,7 +62,7 @@ const AffiliateDashboard = () => {
     },
     {
       title: "Total Referrals",
-      value: loading ? "..." : stats.totalReferrals.toString(),
+      value: loading ? "..." : totalReferrals.toString(),
       icon: UserPlus,
       color: "text-orange-600",
       bgColor: "bg-orange-50",
@@ -117,7 +126,7 @@ const AffiliateDashboard = () => {
           {!loading && (
             <div className="text-right">
               <p className="text-base sm:text-lg font-bold text-gray-900">
-                ${stats.currentBalance.toFixed(2)}
+                ${currentBalanceValue.toFixed(2)}
               </p>
               <p className="text-xs text-gray-500">Balance</p>
             </div>
@@ -304,20 +313,20 @@ const AffiliateDashboard = () => {
           </CardHeader>
           <CardContent className="space-y-3 lg:space-y-4">
             <p className="text-sm text-gray-600">
-              Share courses with learners and earn commission when they enroll and complete courses.
+              Earn 80% commission on learner memberships + 20% recurring on renewals.
             </p>
             <div className="p-3 bg-gray-50 rounded-lg border">
               <p className="text-xs font-medium text-gray-700 mb-1">Your Referral Link:</p>
               <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
                 <code className="flex-1 text-xs bg-white p-2 rounded border text-gray-800 font-mono break-all">
-                  {learnerReferralLink}
+                  {urls.learnerUrl || 'Generating link...'}
                 </code>
                 <Button 
                   size="sm" 
                   variant="outline" 
                   className="border-gray-300 w-full sm:w-auto"
-                  onClick={() => copyToClipboard(learnerReferralLink)}
-                  disabled={!user}
+                  onClick={() => urls.learnerUrl && copyToClipboard(urls.learnerUrl)}
+                  disabled={!urls.learnerUrl}
                 >
                   <Copy className="w-3 h-3 mr-1" />
                   Copy
@@ -336,20 +345,20 @@ const AffiliateDashboard = () => {
           </CardHeader>
           <CardContent className="space-y-3 lg:space-y-4">
             <p className="text-sm text-gray-600">
-              Invite other affiliates to join our platform and earn bonuses when they start earning.
+              Earn 80% on learner membership + $2 DCS addon bonus + 20% recurring.
             </p>
             <div className="p-3 bg-gray-50 rounded-lg border">
               <p className="text-xs font-medium text-gray-700 mb-1">Your Affiliate Link:</p>
               <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
                 <code className="flex-1 text-xs bg-white p-2 rounded border text-gray-800 font-mono break-all">
-                  {affiliateReferralLink}
+                  {urls.affiliateUrl || 'Generating link...'}
                 </code>
                 <Button 
                   size="sm" 
                   variant="outline" 
                   className="border-gray-300 w-full sm:w-auto"
-                  onClick={() => copyToClipboard(affiliateReferralLink)}
-                  disabled={!user}
+                  onClick={() => urls.affiliateUrl && copyToClipboard(urls.affiliateUrl)}
+                  disabled={!urls.affiliateUrl}
                 >
                   <Copy className="w-3 h-3 mr-1" />
                   Copy

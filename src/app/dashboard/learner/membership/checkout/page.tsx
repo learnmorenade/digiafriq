@@ -8,11 +8,11 @@ import { useMembershipStatus } from '@/lib/hooks/useMembershipStatus';
 import { supabase } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 
-// Currency conversion rates (matching enhanced payment system)
+// Currency conversion rates (Dec 2024) - rate = 1 USD in local currency
 const CURRENCY_RATES = {
   USD: { rate: 1, symbol: '$', name: 'US Dollar' },
   GHS: { rate: 10, symbol: '₵', name: 'Ghanaian Cedi' },
-  NGN: { rate: 1400, symbol: '₦', name: 'Nigerian Naira' },
+  NGN: { rate: 852.94, symbol: '₦', name: 'Nigerian Naira' },
   KES: { rate: 129.4, symbol: 'KSh', name: 'Kenyan Shilling' },
   ZAR: { rate: 17, symbol: 'R', name: 'South African Rand' },
   XOF: { rate: 560, symbol: 'CFA', name: 'West African CFA Franc' },

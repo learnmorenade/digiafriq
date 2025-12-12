@@ -8,17 +8,27 @@ import {
   Target,
   BarChart3,
   Award,
-  Zap
+  Zap,
+  Loader2
 } from 'lucide-react'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
+import { useMembershipDetails } from '@/lib/hooks/useMembershipDetails'
 
 const AffiliateUpgradePage = () => {
   const router = useRouter()
+  const { hasDCS, loading: dcsLoading } = useMembershipDetails()
   const [affiliatePackageId, setAffiliatePackageId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+
+  // Redirect if user already has DCS
+  useEffect(() => {
+    if (!dcsLoading && hasDCS) {
+      router.push('/dashboard/affiliate')
+    }
+  }, [hasDCS, dcsLoading, router])
 
   // Fetch the $7 affiliate package
   useEffect(() => {
@@ -90,11 +100,11 @@ const AffiliateUpgradePage = () => {
     }
   ]
 
-  if (loading) {
+  if (loading || dcsLoading) {
     return (
-      <div className="p-6 flex items-center justify-center">
+      <div className="p-6 flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
-          <div className="w-8 h-8 border-4 border-orange-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <Loader2 className="w-12 h-12 animate-spin text-[#ed874a] mx-auto mb-4" />
           <p className="text-gray-600">Loading membership options...</p>
         </div>
       </div>

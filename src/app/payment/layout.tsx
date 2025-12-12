@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { useAuth } from '@/lib/supabase/auth'
 import { Loader2 } from 'lucide-react'
 
@@ -11,15 +11,30 @@ export default function PaymentLayout({
   children: React.ReactNode
 }) {
   const router = useRouter()
+  const pathname = usePathname()
   const { user, loading } = useAuth()
 
+  // Guest callback page doesn't require authentication
+  const isGuestCallback = pathname?.includes('/payment/guest-callback')
+
   useEffect(() => {
+    // Skip auth check for guest callback page
+    if (isGuestCallback) {
+      console.log('[PaymentLayout] Guest callback page - skipping auth check')
+      return
+    }
+    
     // Redirect to login if no user and auth is done loading
     if (!loading && !user) {
       console.log('[PaymentLayout] No user found, redirecting to /login')
       router.push('/login')
     }
-  }, [user, loading, router])
+  }, [user, loading, router, isGuestCallback])
+
+  // Guest callback page renders immediately without auth check
+  if (isGuestCallback) {
+    return <>{children}</>
+  }
 
   // Show loading state while checking auth
   if (loading) {

@@ -13,6 +13,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { useCommissions } from '@/hooks/useReferrals'
+import { toast } from 'sonner'
 
 interface BankPaymentMethod {
   id: number
@@ -45,7 +47,8 @@ const WithdrawalsPage = () => {
     network: ''
   })
 
-  const availableBalance = 58.00
+  const { getAvailableEarnings } = useCommissions()
+  const availableBalance = getAvailableEarnings()
   const minimumWithdrawal = 10.00
 
   // Simulated fetch from profile - in real app, this would be an API call
@@ -116,25 +119,25 @@ const WithdrawalsPage = () => {
   const handleNextStep = () => {
     if (step === 1) {
       if (!withdrawalAmount || !selectedMethod) {
-        alert('Please enter amount and select payment method')
+        toast.error('Please enter amount and select payment method')
         return
       }
       
       const amount = parseFloat(withdrawalAmount)
       if (amount < minimumWithdrawal) {
-        alert(`Minimum withdrawal amount is ${minimumWithdrawal} USD`)
+        toast.error(`Minimum withdrawal amount is ${minimumWithdrawal} USD`)
         return
       }
       
       if (amount > availableBalance) {
-        alert('Insufficient balance')
+        toast.error('Insufficient balance')
         return
       }
 
       // Check if payment method exists
       const savedMethod = savedPaymentMethods.find(method => method.type === selectedMethod)
       if (!savedMethod) {
-        alert('Please set up your payment details in your profile first')
+        toast.error('Please set up your payment details in your profile first')
         return
       }
       
@@ -144,7 +147,7 @@ const WithdrawalsPage = () => {
 
   const handleConfirmWithdrawal = () => {
     // Process withdrawal
-    alert('Withdrawal request submitted successfully!')
+    toast.success('Withdrawal request submitted successfully!')
     // Reset form
     setStep(1)
     setWithdrawalAmount('')

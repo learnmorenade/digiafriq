@@ -8,6 +8,12 @@ export type Json =
 
 export type Database = {
   public: {
+    Enums: {
+      user_role: 'learner' | 'affiliate' | 'admin'
+      lesson_type: 'video' | 'text' | 'file' | 'quiz'
+      payment_status: 'pending' | 'completed' | 'failed' | 'refunded'
+      payout_status: 'pending' | 'processing' | 'completed' | 'failed'
+    },
     Tables: {
       affiliate_profiles: {
         Row: {
@@ -18,9 +24,13 @@ export type Database = {
           total_referrals: number
           bank_name: string | null
           account_number: string | null
-          account_name: string | null
-          is_verified: boolean
+          member_type: Database['public']['Enums']['user_role']
+          is_active: boolean
+          features: string[]
           created_at: string
+          has_digital_cashflow: boolean
+          digital_cashflow_price: number
+          is_verified: boolean
           updated_at: string
         }
         Insert: {
@@ -246,6 +256,49 @@ export type Database = {
           updated_at?: string
         }
       }
+      membership_course_access: {
+        Row: {
+          id: string
+          membership_package_id: string
+          course_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          membership_package_id: string
+          course_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          membership_package_id?: string
+          course_id?: string
+          created_at?: string
+        }
+      }
+      membership_promotion_rights: {
+        Row: {
+          id: string
+          membership_package_id: string
+          promotable_membership_id: string
+          commission_rate: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          membership_package_id: string
+          promotable_membership_id: string
+          commission_rate: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          membership_package_id?: string
+          promotable_membership_id?: string
+          commission_rate?: number
+          created_at?: string
+        }
+      }
       modules: {
         Row: {
           id: string
@@ -278,13 +331,17 @@ export type Database = {
       notifications: {
         Row: {
           id: string
-          user_id: string
-          title: string
-          message: string
-          type: string
-          is_read: boolean
-          action_url: string | null
+          name: string
+          description: string
+          price: number
+          currency: string
+          duration_months: number
+          member_type: 'learner' | 'affiliate'
+          is_active: boolean
+          features: string[]
           created_at: string
+          has_digital_cashflow: boolean
+          digital_cashflow_price: number
         }
         Insert: {
           id?: string
