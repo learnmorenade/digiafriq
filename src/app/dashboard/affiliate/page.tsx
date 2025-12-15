@@ -1,5 +1,5 @@
 "use client"
-import React, { Suspense } from 'react'
+import React, { Suspense, useState, useEffect } from 'react'
 import { 
   DollarSign, 
   TrendingUp, 
@@ -7,7 +7,8 @@ import {
   GraduationCap,
   Copy,
   Loader2,
-  UserPlus
+  UserPlus,
+  Clock
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -15,6 +16,8 @@ import { useAffiliateData } from '@/lib/hooks/useAffiliateData'
 import { useAuth } from '@/lib/supabase/auth'
 import { useReferralCode, useReferralStats, useCommissions } from '@/hooks/useReferrals'
 import { toast } from 'sonner'
+import { getUserWithdrawals, Withdrawal } from '@/lib/withdrawals'
+import Link from 'next/link'
 
 const AffiliateDashboard = () => {
   const { stats: affiliateStats, recentCommissions, recentPayouts, affiliateProfile, loading: affiliateLoading, error } = useAffiliateData()
@@ -31,11 +34,46 @@ const AffiliateDashboard = () => {
 
   const loading = affiliateLoading || referralStatsLoading || commissionsLoading || referralCodeLoading
 
-  // Copy to clipboard function
+  // Pending withdrawals state
+  const [pendingWithdrawals, setPendingWithdrawals] = useState<Withdrawal[]>([])
+  const [withdrawalsLoading, setWithdrawalsLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchWithdrawals = async () => {
+      if (!user) return
+      setWithdrawalsLoading(true)
+      const { data, error } = await getUserWithdrawals()
+      if (!error && data) {
+        setPendingWithdrawals(data.filter(w => w.status === 'PENDING' || w.status === 'APPROVED'))
+      }
+      setWithdrawalsLoading(false)
+    }
+    fetchWithdrawals()
+  }, [user])
+
+  const pendingAmount = pendingWithdrawals
+    .filter(w => w.status === 'PENDING')
+    .reduce((sum, w) => sum + w.amount_usd, 0)
+
+  // Copy to clipboard function with fallback
   const copyToClipboard = async (text: string) => {
     try {
-      await navigator.clipboard.writeText(text)
-      // You could add a toast notification here
+      // Try modern clipboard API first
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text)
+      } else {
+        // Fallback for older browsers or non-secure contexts
+        const textArea = document.createElement('textarea')
+        textArea.value = text
+        textArea.style.position = 'fixed'
+        textArea.style.left = '-999999px'
+        textArea.style.top = '-999999px'
+        document.body.appendChild(textArea)
+        textArea.focus()
+        textArea.select()
+        document.execCommand('copy')
+        document.body.removeChild(textArea)
+      }
       toast.success('Link copied to clipboard!')
     } catch (err) {
       console.error('Failed to copy: ', err)
@@ -184,6 +222,25 @@ const AffiliateDashboard = () => {
           ))
         )}
       </div>
+
+      {/* Pending Withdrawals Card */}
+      {pendingAmount > 0 && (
+        <Card className="mb-6 border-l-4 border-l-yellow-500">
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-4">
+              <div className="p-3 bg-yellow-100 rounded-full">
+                <Clock className="w-6 h-6 text-yellow-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">Pending Withdrawals</h3>
+                <p className="text-sm text-yellow-600">
+                  <span className="font-medium">${pendingAmount.toFixed(2)}</span> awaiting review
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Recent Activity - Sales & Transactions */}
       <div className="mb-8">

@@ -20,7 +20,8 @@ import { useMembershipDetails } from '@/lib/hooks/useMembershipDetails'
 const AffiliateUpgradePage = () => {
   const router = useRouter()
   const { hasDCS, loading: dcsLoading } = useMembershipDetails()
-  const [affiliatePackageId, setAffiliatePackageId] = useState<string | null>(null)
+  const [learnerPackageId, setLearnerPackageId] = useState<string | null>(null)
+  const [dcsAddonPrice, setDcsAddonPrice] = useState<number>(0)
   const [loading, setLoading] = useState(true)
 
   // Redirect if user already has DCS
@@ -30,37 +31,37 @@ const AffiliateUpgradePage = () => {
     }
   }, [hasDCS, dcsLoading, router])
 
-  // Fetch the $7 affiliate package
+  // Fetch the learner package with DCS addon
   useEffect(() => {
-    const fetchAffiliatePackage = async () => {
+    const fetchLearnerPackage = async () => {
       try {
-        const response = await fetch('/api/memberships?member_type=affiliate')
+        const response = await fetch('/api/memberships?member_type=learner')
         if (response.ok) {
           const data = await response.json()
-          // Find the $7 USD package
-          const $7Package = data.packages?.find((pkg: any) => 
-            pkg.price === 7.00 && 
-            pkg.currency === 'USD' && 
-            pkg.member_type === 'affiliate'
+          // Find the learner package with DCS addon enabled
+          const learnerPackage = data.packages?.find((pkg: any) => 
+            pkg.member_type === 'learner' && 
+            pkg.has_digital_cashflow === true
           )
-          if ($7Package) {
-            setAffiliatePackageId($7Package.id)
+          if (learnerPackage) {
+            setLearnerPackageId(learnerPackage.id)
+            setDcsAddonPrice(learnerPackage.digital_cashflow_price || 0)
           }
         }
       } catch (error) {
-        console.error('Failed to fetch affiliate package:', error)
+        console.error('Failed to fetch learner package:', error)
       } finally {
         setLoading(false)
       }
     }
 
-    fetchAffiliatePackage()
+    fetchLearnerPackage()
   }, [])
 
   const handleUpgradeClick = () => {
-    if (affiliatePackageId) {
-      // Go directly to checkout for the $7 package
-      router.push(`/dashboard/learner/membership/checkout?membershipId=${affiliatePackageId}&upgrade=true`)
+    if (learnerPackageId) {
+      // Go directly to checkout for the DCS addon upgrade
+      router.push(`/checkout/${learnerPackageId}?addon=digital-cashflow&upgrade=true`)
     } else {
       // Fallback to membership page if package not found
       router.push('/dashboard/learner/membership')
@@ -283,7 +284,7 @@ const AffiliateUpgradePage = () => {
               size="lg" 
               className="bg-white text-[#ed874a] hover:bg-gray-100 px-8"
             >
-              Upgrade for $7
+              Upgrade for ${dcsAddonPrice}
             </Button>
             <p className="text-sm opacity-75">
               One-time payment • Start earning immediately

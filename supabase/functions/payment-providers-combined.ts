@@ -143,11 +143,22 @@ export class CurrencyConverter {
     // This would typically fetch from your database or an API
     // For now, return fixed rates
     const fixedRates: Record<string, number> = {
+      // USD to other currencies
       'USD-GHS': 10.0,
-      'USD-NGN': 1200.0,
-      'GHS-USD': 0.1,
-      'NGN-USD': 0.000833,
+      'USD-NGN': 888.89,
+      'USD-KES': 129.44,
+      'USD-ZAR': 17.22,
+      'USD-XOF': 561.11,
+      'USD-XAF': 561.11,
       'USD-USD': 1.0,
+      
+      // Other currencies to USD (reverse rates)
+      'GHS-USD': 0.1,
+      'NGN-USD': 0.001125,
+      'KES-USD': 0.007726,
+      'ZAR-USD': 0.058072,
+      'XOF-USD': 0.001782,
+      'XAF-USD': 0.001782,
     };
 
     const key = `${fromCurrency.toUpperCase()}-${toCurrency.toUpperCase()}`;

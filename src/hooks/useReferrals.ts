@@ -214,12 +214,14 @@ export function useReferrals() {
 export function useCommissions() {
   const { user } = useAuth();
   const [commissions, setCommissions] = useState<Commission[]>([]);
+  const [availableBalance, setAvailableBalance] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) {
       setCommissions([]);
+      setAvailableBalance(0);
       setLoading(false);
       return;
     }
@@ -232,8 +234,26 @@ export function useCommissions() {
       setLoading(true);
       setError(null);
       
+      // Load commissions
       const userCommissions = await getUserCommissions(user!.id);
       setCommissions(userCommissions);
+
+      // Load available balance from affiliate_profiles
+      const { data: profile, error: profileError } = await (supabase as any)
+        .from('affiliate_profiles')
+        .select('available_balance')
+        .eq('id', user!.id)
+        .single();
+
+      if (profile && !profileError) {
+        setAvailableBalance(profile.available_balance || 0);
+      } else {
+        // Fallback: calculate from commissions if no profile
+        const calculated = userCommissions
+          .filter((c: Commission) => c.status === 'available')
+          .reduce((total: number, c: Commission) => total + c.commission_amount, 0);
+        setAvailableBalance(calculated);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load commissions');
     } finally {
@@ -250,9 +270,8 @@ export function useCommissions() {
   };
 
   const getAvailableEarnings = () => {
-    return commissions
-      .filter(c => c.status === 'available')
-      .reduce((total, commission) => total + commission.commission_amount, 0);
+    // Return the actual available balance from affiliate_profiles
+    return availableBalance;
   };
 
   const getPaidEarnings = () => {

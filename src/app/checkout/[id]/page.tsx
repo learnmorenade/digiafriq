@@ -12,12 +12,12 @@ import Image from 'next/image';
 // Currency conversion rates (Dec 2024) - rate = 1 USD in local currency
 const CURRENCY_RATES = {
   USD: { rate: 1, symbol: '$', name: 'US Dollar' },
-  GHS: { rate: 10, symbol: '₵', name: 'Ghanaian Cedi' },
-  NGN: { rate: 852.94, symbol: '₦', name: 'Nigerian Naira' },
-  KES: { rate: 129.4, symbol: 'KSh', name: 'Kenyan Shilling' },
-  ZAR: { rate: 17, symbol: 'R', name: 'South African Rand' },
-  XOF: { rate: 560, symbol: 'CFA', name: 'West African CFA Franc' },
-  XAF: { rate: 560, symbol: 'XAF', name: 'Central African CFA Franc' },
+  GHS: { rate: 10.0, symbol: '₵', name: 'Ghanaian Cedi' },
+  NGN: { rate: 888.89, symbol: '₦', name: 'Nigerian Naira' },
+  KES: { rate: 129.44, symbol: 'KSh', name: 'Kenyan Shilling' },
+  ZAR: { rate: 17.22, symbol: 'R', name: 'South African Rand' },
+  XOF: { rate: 561.11, symbol: 'CFA', name: 'West African CFA Franc' },
+  XAF: { rate: 561.11, symbol: 'XAF', name: 'Central African CFA Franc' },
 } as const;
 
 type Currency = keyof typeof CURRENCY_RATES;
@@ -102,9 +102,6 @@ function CheckoutContent() {
   
   // Addon state - can be toggled by user, defaults to URL param
   const [hasAddon, setHasAddon] = useState(hasAddonParam);
-  
-  // Digital Cashflow addon price (fixed at $7)
-  const DCS_ADDON_PRICE = 7;
 
   // State
   const [membershipData, setMembershipData] = useState<any>(null);
@@ -228,10 +225,11 @@ function CheckoutContent() {
     };
   }, [membershipData, hasLearnerMembership, allMemberships, isUpgradeFlow]);
 
-  // Calculate total price including addon
+  // Calculate total price including addon - use database value for DCS addon price
+  const dcsAddonPrice = membershipData?.digital_cashflow_price || 0;
   const basePrice = upgradePricing?.isUpgrade ? upgradePricing.upgradePrice : membershipData?.price || 0;
-  const addonPrice = hasAddon ? DCS_ADDON_PRICE : 0;
-  const actualPrice = isUpgradeFlow && hasAddon ? DCS_ADDON_PRICE : basePrice + addonPrice; // For upgrade-only addon purchase
+  const addonPrice = hasAddon ? dcsAddonPrice : 0;
+  const actualPrice = isUpgradeFlow && hasAddon ? dcsAddonPrice : basePrice + addonPrice; // For upgrade-only addon purchase
   const convertedPrice = actualPrice * CURRENCY_RATES[currency].rate;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -522,7 +520,7 @@ function CheckoutContent() {
                       <div className="flex items-center gap-2 mb-2">
                         <span className="text-lg font-semibold text-gray-900">Digital Cashflow System</span>
                         <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-xs font-medium rounded-full">
-                          +${DCS_ADDON_PRICE}
+                          +${dcsAddonPrice}
                         </span>
                       </div>
                       <p className="text-sm text-gray-600 mb-2">
@@ -578,7 +576,7 @@ function CheckoutContent() {
                 {isUpgradeFlow && hasAddon && (
                   <div className="flex justify-between text-gray-700">
                     <span>Digital Cashflow Addon</span>
-                    <span>${DCS_ADDON_PRICE}</span>
+                    <span>${dcsAddonPrice}</span>
                   </div>
                 )}
                 
@@ -592,7 +590,7 @@ function CheckoutContent() {
                     {hasAddon && (
                       <div className="flex justify-between text-gray-700">
                         <span>Digital Cashflow Addon</span>
-                        <span>+${DCS_ADDON_PRICE}</span>
+                        <span>+${dcsAddonPrice}</span>
                       </div>
                     )}
                   </>

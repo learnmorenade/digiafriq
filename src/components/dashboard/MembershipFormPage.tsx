@@ -111,7 +111,7 @@ export default function MembershipFormPage({
     name: '',
     description: '',
     price: '',
-    currency: 'GHS',
+    currency: 'USD',
     duration_months: '',
     member_type: 'learner' as 'learner' | 'affiliate',
     is_active: true,
@@ -504,21 +504,11 @@ export default function MembershipFormPage({
 
               <div>
                 <Label htmlFor="currency">Currency</Label>
-                <Select
-                  value={formData.currency}
-                  onValueChange={(value) => handleInputChange('currency', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="GHS">GHS (₵)</SelectItem>
-                    <SelectItem value="NGN">NGN (₦)</SelectItem>
-                    <SelectItem value="USD">USD ($)</SelectItem>
-                    <SelectItem value="EUR">EUR (€)</SelectItem>
-                    <SelectItem value="GBP">GBP (£)</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="flex items-center h-10 px-3 rounded-md border border-gray-200 bg-gray-100 text-gray-700">
+                  <span className="font-medium">USD ($)</span>
+                  <span className="ml-2 text-xs text-gray-500">Fixed currency</span>
+                </div>
+                <input type="hidden" name="currency" value="USD" />
               </div>
 
               <div>
@@ -534,6 +524,33 @@ export default function MembershipFormPage({
                 />
               </div>
             </div>
+
+            {/* Total Price Display */}
+            {formData.price && (
+              <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-700">Total Price (displayed to users)</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {formData.has_digital_cashflow 
+                        ? `Base (${formatPrice(parseFloat(formData.price) || 0, formData.currency)}) + DCS Add-on (${formatPrice(formData.digital_cashflow_price || 0, formData.currency)})`
+                        : 'Base price only'}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-bold text-[#ed874a]">
+                      {formatPrice(
+                        (parseFloat(formData.price) || 0) + (formData.has_digital_cashflow ? (formData.digital_cashflow_price || 0) : 0),
+                        formData.currency
+                      )}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {formData.duration_months ? `for ${formData.duration_months} month${parseInt(formData.duration_months) !== 1 ? 's' : ''}` : ''}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="flex items-center space-x-2">
               <Checkbox

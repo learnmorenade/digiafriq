@@ -246,6 +246,34 @@ async function processReferralCommissions(payment: any, verificationData: any) {
         }
       }
 
+      // DCS Link Bonus: If referral was made via DCS link (link_type === 'dcs'), 
+      // add extra $2 commission for the Digital Cashflow System bonus
+      if (referral.link_type === 'dcs' && commissionType === 'learner_referral') {
+        console.log('💰 Creating $2 USD DCS bonus commission (referral via DCS link)')
+        
+        const { error: dcsCommissionError } = await supabase
+          .from('commissions')
+          .insert({
+            affiliate_id: referral.referrer_id,
+            referral_id: referral.id,
+            payment_id: payment.id,
+            commission_type: 'dcs_addon',
+            commission_amount: 2.00,
+            commission_currency: 'USD',
+            commission_rate: 0,
+            base_amount: 2.00,
+            base_currency: 'USD',
+            status: 'available',
+            notes: '$2 USD DCS bonus - referral made via Digital Cashflow link'
+          }) as any
+
+        if (dcsCommissionError) {
+          console.error('❌ Failed to create $2 DCS commission:', dcsCommissionError)
+        } else {
+          console.log('✅ $2 USD DCS commission created successfully')
+        }
+      }
+
       // Mark referral as completed
       const referralCompleted = await completeReferral(referral.id)
       if (referralCompleted) {

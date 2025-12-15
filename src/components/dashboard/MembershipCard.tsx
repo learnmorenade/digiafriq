@@ -27,12 +27,13 @@ interface MembershipCardProps {
 }
 
 export function MembershipCard({ membership, onSelect, selected }: MembershipCardProps) {
-  // Default addon to selected (true)
-  const [isAddonSelected, setIsAddonSelected] = useState(true)
+  // Default addon to selected (true) if addon is available
+  const [isAddonSelected, setIsAddonSelected] = useState(membership.has_digital_cashflow)
   
-  // Base price is $10, with addon is $17
-  const basePrice = 10
-  const totalPrice = isAddonSelected ? 17 : 10
+  // Use database values for pricing
+  const basePrice = membership.price
+  const addonPrice = membership.digital_cashflow_price || 0
+  const totalPrice = isAddonSelected && membership.has_digital_cashflow ? basePrice + addonPrice : basePrice
   
   const handleAddonToggle = (checked: boolean) => {
     setIsAddonSelected(checked)
@@ -60,7 +61,7 @@ export function MembershipCard({ membership, onSelect, selected }: MembershipCar
               <span className="text-muted-foreground">per year</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              Renews at $10/year
+              Renews at ${basePrice}/year
             </p>
           </div>
 

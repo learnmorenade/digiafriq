@@ -11,12 +11,12 @@ import { toast } from 'sonner';
 // Currency conversion rates (Dec 2024) - rate = 1 USD in local currency
 const CURRENCY_RATES = {
   USD: { rate: 1, symbol: '$', name: 'US Dollar' },
-  GHS: { rate: 10, symbol: '₵', name: 'Ghanaian Cedi' },
-  NGN: { rate: 852.94, symbol: '₦', name: 'Nigerian Naira' },
-  KES: { rate: 129.4, symbol: 'KSh', name: 'Kenyan Shilling' },
-  ZAR: { rate: 17, symbol: 'R', name: 'South African Rand' },
-  XOF: { rate: 560, symbol: 'CFA', name: 'West African CFA Franc' },
-  XAF: { rate: 560, symbol: 'XAF', name: 'Central African CFA Franc' },
+  GHS: { rate: 10.0, symbol: '₵', name: 'Ghanaian Cedi' },
+  NGN: { rate: 888.89, symbol: '₦', name: 'Nigerian Naira' },
+  KES: { rate: 129.44, symbol: 'KSh', name: 'Kenyan Shilling' },
+  ZAR: { rate: 17.22, symbol: 'R', name: 'South African Rand' },
+  XOF: { rate: 561.11, symbol: 'CFA', name: 'West African CFA Franc' },
+  XAF: { rate: 561.11, symbol: 'XAF', name: 'Central African CFA Franc' },
 } as const;
 
 type Currency = keyof typeof CURRENCY_RATES;

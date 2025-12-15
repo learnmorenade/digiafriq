@@ -126,7 +126,7 @@ const ChangePasswordPage = () => {
     <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="mb-6">
-          <Link href="/dashboard/affiliate/profile">
+          <Link href="/dashboard/profile">
             <Button variant="ghost" className="mb-4">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Profile

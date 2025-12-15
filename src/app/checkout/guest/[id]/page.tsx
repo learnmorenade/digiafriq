@@ -11,12 +11,12 @@ import { toast } from 'sonner';
 // Currency conversion rates (Dec 2024) - rate = 1 USD in local currency
 const CURRENCY_RATES = {
   USD: { rate: 1, symbol: '$', name: 'US Dollar' },
-  GHS: { rate: 10, symbol: '₵', name: 'Ghanaian Cedi' },
-  NGN: { rate: 852.94, symbol: '₦', name: 'Nigerian Naira' },
-  KES: { rate: 129.4, symbol: 'KSh', name: 'Kenyan Shilling' },
-  ZAR: { rate: 17, symbol: 'R', name: 'South African Rand' },
-  XOF: { rate: 560, symbol: 'CFA', name: 'West African CFA Franc' },
-  XAF: { rate: 560, symbol: 'XAF', name: 'Central African CFA Franc' },
+  GHS: { rate: 10.0, symbol: '₵', name: 'Ghanaian Cedi' },
+  NGN: { rate: 888.89, symbol: '₦', name: 'Nigerian Naira' },
+  KES: { rate: 129.44, symbol: 'KSh', name: 'Kenyan Shilling' },
+  ZAR: { rate: 17.22, symbol: 'R', name: 'South African Rand' },
+  XOF: { rate: 561.11, symbol: 'CFA', name: 'West African CFA Franc' },
+  XAF: { rate: 561.11, symbol: 'XAF', name: 'Central African CFA Franc' },
 } as const;
 
 type Currency = keyof typeof CURRENCY_RATES;
@@ -139,8 +139,7 @@ export default function CheckoutPage() {
   const isUpgradeFlow = searchParams.get('upgrade') === 'true';
   const hasAddonParam = searchParams.get('addon') === 'digital-cashflow';
   
-  // Digital Cashflow addon price (fixed at $7)
-  const DCS_ADDON_PRICE = 7;
+  // Digital Cashflow addon price - fetched from database
   
   // Addon state - can be toggled by user for learner memberships
   const [hasAddon, setHasAddon] = useState(hasAddonParam);
@@ -344,14 +343,16 @@ export default function CheckoutPage() {
   // For learner_dcs membership, addon is always included and cannot be unchecked
   const addonIncluded = isLearnerDcsMembership;
   
+  // Get DCS addon price from database
+  const dcsAddonPrice = membershipData?.digital_cashflow_price || 0;
+  
   // Calculate addon price:
   // - If learner_dcs membership: addon is included in base price, no extra charge
-  // - If learner membership + user selects addon: add $7
-  const addonPrice = (hasAddon || addonIncluded) ? DCS_ADDON_PRICE : 0;
+  // - If learner membership + user selects addon: add DCS price from database
+  const addonPrice = (hasAddon || addonIncluded) ? dcsAddonPrice : 0;
   
-  // Base price is the membership price (for learner_dcs, this is $10 learner price, DCS is added separately)
-  // For learner_dcs memberships, the database price might already include DCS, so we use $10 as base
-  const membershipBasePrice = addonIncluded ? 10 : (membershipData?.price || 0);
+  // Base price is the membership price from database
+  const membershipBasePrice = membershipData?.price || 0;
   const basePrice = upgradePricing?.isUpgrade ? upgradePricing.upgradePrice : membershipBasePrice;
   const actualPrice = basePrice + addonPrice; // $10 + $7 = $17 for learner_dcs
   const displayPrice = actualPrice;
@@ -834,7 +835,7 @@ export default function CheckoutPage() {
                       <div className="flex items-center gap-2 mb-2">
                         <span className="text-lg font-semibold text-gray-900">Digital Cashflow System</span>
                         <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-xs font-medium rounded-full">
-                          {addonIncluded ? 'Included' : `+$${DCS_ADDON_PRICE}`}
+                          {addonIncluded ? 'Included' : `+$${dcsAddonPrice}`}
                         </span>
                       </div>
                       <p className="text-sm text-gray-600 mb-2">
@@ -899,7 +900,7 @@ export default function CheckoutPage() {
                 {(hasAddon && !addonIncluded) && (
                   <div className="flex justify-between text-gray-700 mb-2">
                     <span>Digital Cashflow Addon</span>
-                    <span>+${DCS_ADDON_PRICE}</span>
+                    <span>+${dcsAddonPrice}</span>
                   </div>
                 )}
                 {addonIncluded && (

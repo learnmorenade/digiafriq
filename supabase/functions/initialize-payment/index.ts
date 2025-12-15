@@ -181,20 +181,20 @@ class CurrencyConverter {
     const fixedRates: Record<string, number> = {
       // USD to other currencies
       'USD-GHS': 10.0,
-      'USD-NGN': 852.94,
-      'USD-KES': 129.4,
-      'USD-ZAR': 17.0,
-      'USD-XOF': 560.0,
-      'USD-XAF': 560.0,
+      'USD-NGN': 888.89,
+      'USD-KES': 129.44,
+      'USD-ZAR': 17.22,
+      'USD-XOF': 561.11,
+      'USD-XAF': 561.11,
       'USD-USD': 1.0,
       
       // Other currencies to USD (reverse rates)
       'GHS-USD': 0.1,
-      'NGN-USD': 0.001172,
-      'KES-USD': 0.007727,
-      'ZAR-USD': 0.058824,
-      'XOF-USD': 0.001786,
-      'XAF-USD': 0.001786,
+      'NGN-USD': 0.001125,
+      'KES-USD': 0.007726,
+      'ZAR-USD': 0.058072,
+      'XOF-USD': 0.001782,
+      'XAF-USD': 0.001782,
     };
 
     const key = `${fromCurrency.toUpperCase()}-${toCurrency.toUpperCase()}`;

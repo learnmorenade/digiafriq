@@ -93,11 +93,11 @@ class CurrencyConverter {
     // Exchange rates (Dec 2024)
     const fixedRates: Record<string, number> = {
       'USD-GHS': 10.0,
-      'USD-NGN': 852.94,
-      'USD-KES': 129.4,
-      'USD-ZAR': 17.0,
-      'USD-XOF': 560.0,
-      'USD-XAF': 560.0,
+      'USD-NGN': 888.89,
+      'USD-KES': 129.44,
+      'USD-ZAR': 17.22,
+      'USD-XOF': 561.11,
+      'USD-XAF': 561.11,
       'USD-USD': 1.0,
     };
 

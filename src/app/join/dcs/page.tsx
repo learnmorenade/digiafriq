@@ -34,6 +34,8 @@ interface MembershipPackage {
   duration_months: number
   features: string[]
   is_active: boolean
+  has_digital_cashflow?: boolean
+  digital_cashflow_price?: number
 }
 
 export default function DCSSalesPage() {
@@ -45,7 +47,7 @@ export default function DCSSalesPage() {
   const [loading, setLoading] = useState(true)
   const [referrerName, setReferrerName] = useState<string | null>(null)
 
-  const DCS_ADDON_PRICE = 7 // $7 for DCS addon
+  // DCS addon price is fetched from database
 
   useEffect(() => {
     // Store referral code in localStorage for tracking
@@ -138,7 +140,9 @@ export default function DCSSalesPage() {
     return symbols[currency] || currency
   }
 
-  const totalPrice = membership ? membership.price + DCS_ADDON_PRICE : 0
+  // Get DCS addon price from database
+  const dcsAddonPrice = membership?.digital_cashflow_price || 0
+  const totalPrice = membership ? membership.price + dcsAddonPrice : 0
 
   const earningBenefits = [
     {
@@ -416,7 +420,7 @@ export default function DCSSalesPage() {
                   <span className="text-green-100">/ {membership.duration_months} months</span>
                 </div>
                 <p className="text-green-100 mt-2 text-sm">
-                  {getCurrencySymbol(membership.currency)}{membership.price} membership + {getCurrencySymbol(membership.currency)}{DCS_ADDON_PRICE} DCS addon
+                  {getCurrencySymbol(membership.currency)}{membership.price} membership + {getCurrencySymbol(membership.currency)}{dcsAddonPrice} DCS addon
                 </p>
               </div>
               <CardContent className="p-8">

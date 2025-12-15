@@ -687,127 +687,84 @@ async function processReferral(
     console.log('💰 Commission base amount (USD):', paymentAmountUSD)
     
     let commissionAmount = 0
-    // Use commission types that match the database constraint:
-    // 'learner_initial', 'dcs_addon', 'learner_renewal', 'learner_referral', 'affiliate_referral'
-    // Note: Run migration 20241209100000_fix_commission_types_and_affiliate_links.sql to add referral types
+    // Commission logic:
+    // - Learner link referral: 80% of $10 = $8
+    // - DCS link referral: 80% of $10 + $2 DCS bonus = $10
+    // The $2 bonus is ONLY based on link_type, NOT what the buyer purchased
 
-    if (initialPurchaseType === 'learner_dcs') {
-      // Create two separate commissions: one for learner, one for DCS addon
+    // 1. Always create learner commission (80% of $10 = $8)
+    const learnerCommission = 8
+    const { error: learnerCommissionError } = await supabaseAdmin
+      .from('commissions')
+      .insert({
+        affiliate_id: referrerId,
+        referral_id: referral.id,
+        payment_id: payment.id,
+        commission_type: 'learner_initial',
+        base_amount: 10, // Base learner price
+        base_currency: 'USD',
+        commission_rate: 0.80,
+        commission_amount: learnerCommission,
+        commission_currency: 'USD',
+        status: 'available',
+        notes: 'Learner referral commission (80% of $10)'
+      })
+
+    if (learnerCommissionError) {
+      console.error('❌ Learner commission creation error:', learnerCommissionError)
+    } else {
+      console.log('✅ Learner commission created: $', learnerCommission)
+    }
+
+    commissionAmount = learnerCommission
+
+    // 2. DCS Link Bonus: If referral was made via DCS link (linkType === 'dcs'), 
+    // add extra $2 commission for the Digital Cashflow System bonus
+    if (linkType === 'dcs') {
+      console.log('💰 Creating $2 USD DCS bonus commission (referral via DCS link)')
       
-      // 1. Learner initial commission (80% of $10 = $8)
-      const learnerCommission = 8
-      const { error: learnerCommissionError } = await supabaseAdmin
-        .from('commissions')
-        .insert({
-          affiliate_id: referrerId,
-          referral_id: referral.id,
-          payment_id: payment.id,
-          commission_type: 'learner_initial',
-          base_amount: 10, // Base learner price
-          base_currency: 'USD',
-          commission_rate: 0.80,
-          commission_amount: learnerCommission,
-          commission_currency: 'USD',
-          status: 'available',
-          notes: 'Learner referral commission (80% of $10)'
-        })
-
-      if (learnerCommissionError) {
-        console.error('❌ Learner commission creation error:', learnerCommissionError)
-      } else {
-        console.log('✅ Learner commission created: $', learnerCommission)
-      }
-
-      // 2. DCS addon commission ($2 bonus)
-      const dcsCommission = 2
-      const { error: dcsCommissionError } = await supabaseAdmin
+      const dcsBonus = 2
+      const { error: dcsLinkBonusError } = await supabaseAdmin
         .from('commissions')
         .insert({
           affiliate_id: referrerId,
           referral_id: referral.id,
           payment_id: payment.id,
           commission_type: 'dcs_addon',
-          base_amount: 7, // DCS addon price
-          base_currency: 'USD',
-          commission_rate: 0.2857, // ~$2 of $7
-          commission_amount: dcsCommission,
+          commission_amount: dcsBonus,
           commission_currency: 'USD',
+          commission_rate: 0,
+          base_amount: dcsBonus,
+          base_currency: 'USD',
           status: 'available',
-          notes: 'DCS addon referral bonus'
+          notes: '$2 USD DCS bonus - referral made via Digital Cashflow link'
         })
 
-      if (dcsCommissionError) {
-        console.error('❌ DCS commission creation error:', dcsCommissionError)
+      if (dcsLinkBonusError) {
+        console.error('❌ Failed to create $2 DCS link bonus:', dcsLinkBonusError)
       } else {
-        console.log('✅ DCS commission created: $', dcsCommission)
+        console.log('✅ $2 USD DCS link bonus created successfully')
+        commissionAmount += dcsBonus // Total now $10
       }
+    }
 
-      commissionAmount = learnerCommission + dcsCommission // Total $10
-
-      // Update affiliate_profiles stats
-      if (affiliateProfile) {
-        const { error: updateError } = await supabaseAdmin
-          .from('affiliate_profiles')
-          .update({
-            total_earnings: (affiliateProfile.total_earnings || 0) + commissionAmount,
-            available_balance: (affiliateProfile.available_balance || 0) + commissionAmount,
-            lifetime_referrals: (affiliateProfile.lifetime_referrals || 0) + 1,
-            active_referrals: ((affiliateProfile as any).active_referrals || 0) + 1,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', referrerId)
-
-        if (updateError) {
-          console.error('❌ Error updating affiliate profile:', updateError)
-        } else {
-          console.log('✅ Affiliate profile updated with $', commissionAmount)
-        }
-      }
-
-    } else {
-      // Learner only: 80% commission (calculated on USD amount)
-      commissionAmount = Math.round(paymentAmountUSD * 0.80 * 100) / 100
-
-      const { error: commissionError } = await supabaseAdmin
-        .from('commissions')
-        .insert({
-          affiliate_id: referrerId,
-          referral_id: referral.id,
-          payment_id: payment.id,
-          commission_type: 'learner_initial', // Use valid commission type
-          base_amount: paymentAmountUSD,  // Base amount in USD
-          base_currency: 'USD',           // Always USD
-          commission_rate: 0.80,
-          commission_amount: commissionAmount,  // Commission in USD
-          commission_currency: 'USD',           // Always USD
-          status: 'available',
-          notes: `Learner referral commission (80% of $${paymentAmountUSD} USD)`
+    // Update affiliate_profiles stats
+    if (affiliateProfile) {
+      const { error: updateError } = await supabaseAdmin
+        .from('affiliate_profiles')
+        .update({
+          total_earnings: (affiliateProfile.total_earnings || 0) + commissionAmount,
+          available_balance: (affiliateProfile.available_balance || 0) + commissionAmount,
+          lifetime_referrals: (affiliateProfile.lifetime_referrals || 0) + 1,
+          active_referrals: ((affiliateProfile as any).active_referrals || 0) + 1,
+          updated_at: new Date().toISOString()
         })
+        .eq('id', referrerId)
 
-      if (commissionError) {
-        console.error('❌ Commission creation error:', commissionError)
+      if (updateError) {
+        console.error('❌ Error updating affiliate profile:', updateError)
       } else {
-        console.log('✅ Commission created: $', commissionAmount)
-      }
-
-      // Update affiliate_profiles stats
-      if (affiliateProfile) {
-        const { error: updateError } = await supabaseAdmin
-          .from('affiliate_profiles')
-          .update({
-            total_earnings: (affiliateProfile.total_earnings || 0) + commissionAmount,
-            available_balance: (affiliateProfile.available_balance || 0) + commissionAmount,
-            lifetime_referrals: (affiliateProfile.lifetime_referrals || 0) + 1,
-            active_referrals: 1, // Increment by 1
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', referrerId)
-
-        if (updateError) {
-          console.error('❌ Error updating affiliate profile:', updateError)
-        } else {
-          console.log('✅ Affiliate profile updated with $', commissionAmount)
-        }
+        console.log('✅ Affiliate profile updated with $', commissionAmount)
       }
     }
 

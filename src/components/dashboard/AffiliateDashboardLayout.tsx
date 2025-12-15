@@ -133,6 +133,7 @@ const AffiliateDashboardLayout = ({ children, title = "Dashboard" }: AffiliateDa
       ]
     },
     { title: "Tutorials", icon: BookOpen, href: "/dashboard/affiliate/tutorials" },
+    { title: "Profile Settings", icon: User, href: "/dashboard/profile" },
     { title: "Log out", icon: LogOut, href: "/login" }
   ]
 
@@ -211,7 +212,7 @@ const AffiliateDashboardLayout = ({ children, title = "Dashboard" }: AffiliateDa
   }
 
   const profileMenuItems = [
-    { title: "Profile Settings", icon: User, href: "/dashboard/affiliate/profile" },
+    { title: "Profile Settings", icon: User, href: "/dashboard/profile" },
     { title: "Change Password", icon: Settings, href: "/dashboard/affiliate/change-password" },
     { title: "Help & Support", icon: HelpCircle, href: "/dashboard/affiliate/help" },
     { title: "Log out", icon: LogOut, action: handleLogout }
@@ -370,7 +371,7 @@ const AffiliateDashboardLayout = ({ children, title = "Dashboard" }: AffiliateDa
                   <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-50">
                     <div className="py-1">
                       <Link
-                        href="/dashboard/affiliate/profile"
+                        href="/dashboard/profile"
                         className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                         onClick={() => setProfileDropdownOpen(false)}
                       >
@@ -432,7 +433,7 @@ const AffiliateDashboardLayout = ({ children, title = "Dashboard" }: AffiliateDa
                 <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-50">
                   <div className="py-1">
                     <Link
-                      href="/dashboard/affiliate/profile"
+                      href="/dashboard/profile"
                       className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                       onClick={() => setProfileDropdownOpen(false)}
                     >

@@ -27,6 +27,8 @@ interface MembershipPackage {
   membership_course_access?: any[]
   membership_promotion_rights?: any[]
   user_memberships?: any[]
+  has_digital_cashflow?: boolean
+  digital_cashflow_price?: number
 }
 
 export default function MembershipsPage() {
@@ -328,19 +330,31 @@ export default function MembershipsPage() {
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="text-2xl font-bold text-gray-900">
-                            {formatPrice(membership.price, membership.currency)}
+                            {formatPrice(
+                              membership.price + (membership.has_digital_cashflow ? (membership.digital_cashflow_price || 0) : 0),
+                              membership.currency
+                            )}
                           </div>
                           <div className="text-sm text-gray-600">
                             {membership.duration_months} month{membership.duration_months !== 1 ? 's' : ''}
+                            {membership.has_digital_cashflow && (
+                              <span className="text-[#ed874a] ml-1">+ DCS</span>
+                            )}
                           </div>
                         </div>
                         <div className="text-right">
+                          <div className="text-sm text-gray-500">Renews at</div>
                           <div className="text-lg font-semibold text-[#ed874a]">
-                            {formatPrice(membership.price / membership.duration_months, membership.currency)}
+                            {formatPrice(membership.price, membership.currency)}
                           </div>
-                          <div className="text-xs text-gray-500">per month</div>
+                          <div className="text-xs text-gray-500">per year</div>
                         </div>
                       </div>
+                      {membership.has_digital_cashflow && (
+                        <div className="mt-2 pt-2 border-t border-gray-200 text-xs text-gray-500">
+                          Base: {formatPrice(membership.price, membership.currency)} + DCS Add-on: {formatPrice(membership.digital_cashflow_price || 0, membership.currency)}
+                        </div>
+                      )}
                     </div>
 
                     {/* Stats */}
