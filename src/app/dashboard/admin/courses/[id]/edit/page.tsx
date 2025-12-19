@@ -97,11 +97,11 @@ export default function EditCoursePage() {
             id: lesson.id,
             title: lesson.title || '',
             description: lesson.description || '',
-            type: lesson.type || 'video',
-            content_url: lesson.content_url || '',
+            type: lesson.lesson_type || 'video',
+            content_url: lesson.content || '',
             video_url: lesson.video_url || '',
             instructor_notes: lesson.instructor_notes || '',
-            duration: lesson.duration || '',
+            duration: lesson.duration ? String(lesson.duration) : '',
             order_index: lesson.order_index || 0
           }))
       }))
@@ -177,7 +177,10 @@ export default function EditCoursePage() {
           .select()
           .single()
 
-        if (moduleError) throw moduleError
+        if (moduleError) {
+          console.error('Module insert error:', moduleError)
+          throw new Error(moduleError.message || JSON.stringify(moduleError))
+        }
 
         // Create lessons for this module
         for (let j = 0; j < mod.lessons.length; j++) {
@@ -188,15 +191,18 @@ export default function EditCoursePage() {
               module_id: moduleData.id,
               title: lesson.title,
               description: lesson.description,
-              type: lesson.type || 'video',
-              content_url: lesson.content_url,
+              lesson_type: lesson.type || 'video',
+              content: lesson.content_url,
               video_url: lesson.video_url,
               instructor_notes: lesson.instructor_notes,
-              duration: lesson.duration,
+              duration: lesson.duration ? parseInt(lesson.duration) || null : null,
               order_index: j
             })
 
-          if (lessonError) throw lessonError
+          if (lessonError) {
+            console.error('Lesson insert error:', lessonError)
+            throw new Error(lessonError.message || JSON.stringify(lessonError))
+          }
         }
       }
 

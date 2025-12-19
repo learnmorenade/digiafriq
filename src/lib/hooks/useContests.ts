@@ -7,12 +7,14 @@ interface Contest {
   id: string
   name: string
   description: string
+  campaign: string
   start_date: string
   end_date: string
   status: 'running' | 'ended' | 'upcoming'
   prize_amount: number
   prize_description: string
   target_referrals: number
+  winner_criteria: string
   max_participants?: number
   rules: string[]
   created_at: string
@@ -102,14 +104,16 @@ export const useContests = (): ContestsData => {
             const mockRunningContests: Contest[] = [
               {
                 id: '1',
-                name: '25 Affiliate Sales Challenge',
+                name: 'The UMM Boss Sales Challenge',
                 description: 'Refer 25 new affiliates to earn cash reward',
+                campaign: 'The Ultimate Money Machine (U.M.M)',
                 start_date: '2024-10-01',
                 end_date: '2024-12-31',
                 status: 'running',
                 prize_amount: 700,
                 prize_description: '700 Cedis',
                 target_referrals: 25,
+                winner_criteria: 'All target satisfied',
                 max_participants: 100,
                 rules: [
                   'Sales must be verified and legitimate to count toward the contest',
@@ -122,12 +126,14 @@ export const useContests = (): ContestsData => {
                 id: '2',
                 name: '50 Affiliate Sales Challenge',
                 description: 'Refer 50 new affiliates to unlock bigger rewards',
+                campaign: 'DigiAfriq Campaign',
                 start_date: '2024-10-01',
                 end_date: '2024-12-31',
                 status: 'running',
                 prize_amount: 2000,
                 prize_description: '2,000 Cedis',
                 target_referrals: 50,
+                winner_criteria: 'All target satisfied',
                 max_participants: 50,
                 rules: [
                   'Sales must be verified and legitimate to count toward the contest'
@@ -143,12 +149,14 @@ export const useContests = (): ContestsData => {
                 id: '4',
                 name: 'MINI IMPORTATION GOLDMINE',
                 description: 'Import products from China and sell locally for profit',
+                campaign: 'DigiAfriq Campaign',
                 start_date: '2024-07-01',
                 end_date: '2024-09-30',
                 status: 'ended',
                 prize_amount: 700,
                 prize_description: '700 Cedis',
                 target_referrals: 25,
+                winner_criteria: 'All target satisfied',
                 max_participants: 50,
                 rules: [
                   'Contest focused on importation business model'

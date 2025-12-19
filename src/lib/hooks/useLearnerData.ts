@@ -57,19 +57,6 @@ export const useLearnerData = (): LearnerDashboardData => {
       return
     }
 
-    // If not a learner, use mock data immediately
-    if (profile.role !== 'learner') {
-      setStats({
-        totalEnrolled: 8,
-        totalCompleted: 3,
-        totalInProgress: 5,
-        totalWatchTime: 24
-      })
-      setRecentCourses([])
-      setLoading(false)
-      return
-    }
-
     try {
       setLoading(true)
       setError(null)
@@ -154,6 +141,19 @@ export const useLearnerData = (): LearnerDashboardData => {
 
     document.addEventListener('visibilitychange', handleVisibilityChange)
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [fetchLearnerData])
+
+  // Refetch when page is restored from bfcache (browser back/forward)
+  useEffect(() => {
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) {
+        console.log('🔄 Page restored from bfcache, refreshing learner data...')
+        fetchLearnerData()
+      }
+    }
+
+    window.addEventListener('pageshow', handlePageShow)
+    return () => window.removeEventListener('pageshow', handlePageShow)
   }, [fetchLearnerData])
 
   return {

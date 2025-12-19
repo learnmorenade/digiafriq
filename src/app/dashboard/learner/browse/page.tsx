@@ -18,29 +18,63 @@ import { useBrowseCourses } from '@/lib/hooks/useBrowseCourses'
 import CoursePreviewModal from '@/components/CoursePreviewModal'
 import Image from 'next/image'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { enrollInCourse } from '@/lib/courses'
+import { toast } from 'sonner'
 
 const BrowseCoursesPage = () => {
+  const router = useRouter()
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState('popular')
   const [previewCourse, setPreviewCourse] = useState<any>(null)
-  const { courses: backendCourses, enrolledCourseIds, categories, loading, error } = useBrowseCourses()
+  const [enrollingCourseId, setEnrollingCourseId] = useState<string | null>(null)
+  const { courses: backendCourses, enrolledCourseIds, categories, loading, error, refresh } = useBrowseCourses()
+
+  const handleEnroll = async (courseId: string, courseTitle: string) => {
+    try {
+      setEnrollingCourseId(courseId)
+      const result = await enrollInCourse(courseId)
+      
+      if (result.alreadyEnrolled) {
+        toast.info('You are already enrolled in this course')
+        router.push(`/dashboard/learner/courses/${courseId}`)
+      } else {
+        toast.success(`Successfully enrolled in "${courseTitle}"!`)
+        refresh() // Refresh the courses list to update enrollment status
+        router.push(`/dashboard/learner/courses/${courseId}`)
+      }
+    } catch (error: any) {
+      console.error('Enrollment error:', error)
+      toast.error(error.message || 'Failed to enroll in course')
+    } finally {
+      setEnrollingCourseId(null)
+    }
+  }
 
   // Transform backend data to match the expected format
   const courses = backendCourses.map((course: any) => {
     const isEnrolled = enrolledCourseIds.includes(course.id)
     const isNew = new Date(course.created_at) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) // New if created within 30 days
     
+    // Use duration text field, or calculate from estimated_duration if available
+    let durationDisplay = course.duration || 'TBA'
+    if (!course.duration && course.estimated_duration) {
+      const hours = Math.floor(course.estimated_duration / 60)
+      const mins = course.estimated_duration % 60
+      durationDisplay = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`
+    }
+    
     return {
       id: course.id,
       title: course.title,
-      instructor: course.instructor_id || 'TBA',
+      instructor: course.instructor || 'DigiAfriq Team',
       thumbnail: course.thumbnail_url || '/api/placeholder/300/200',
       rating: 4.5, // Default rating since we don't have ratings in backend yet
       studentsCount: Math.floor(Math.random() * 3000) + 100, // Mock student count for now
-      duration: course.estimated_duration ? `${Math.floor(course.estimated_duration / 60)}h ${course.estimated_duration % 60}m` : 'TBA',
+      duration: durationDisplay,
       lessonsCount: course.total_lessons || 0,
-      level: 'Intermediate', // Default level since we don't have this field
+      level: course.level || 'Beginner',
       category: course.category?.toLowerCase().replace(/\s+/g, '-') || 'general',
       tags: course.tags || [],
       description: course.description || 'No description available',
@@ -50,15 +84,6 @@ const BrowseCoursesPage = () => {
       price: course.price || 0
     }
   })
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-[#ed874a]" />
-        <span className="ml-2 text-gray-600">Loading courses...</span>
-      </div>
-    )
-  }
 
   if (error) {
     return (
@@ -238,7 +263,7 @@ const BrowseCoursesPage = () => {
               
               <div className="flex gap-2">
                 {course.enrolled ? (
-                  <Button size="sm" className="flex-1 bg-green-600 hover:bg-green-700" asChild>
+                  <Button size="sm" className="flex-1 bg-[#ed874a] hover:bg-[#d76f32]" asChild>
                     <Link href={`/dashboard/learner/courses/${course.id}`}>
                       <Play className="w-4 h-4 mr-2" />
                       Continue Learning
@@ -246,8 +271,17 @@ const BrowseCoursesPage = () => {
                   </Button>
                 ) : (
                   <>
-                    <Button size="sm" className="flex-1 bg-[#ed874a] hover:bg-[#d76f32]">
-                      <ShoppingCart className="w-4 h-4 mr-2" />
+                    <Button 
+                      size="sm" 
+                      className="flex-1 bg-[#ed874a] hover:bg-[#d76f32]"
+                      onClick={() => handleEnroll(course.id, course.title)}
+                      disabled={enrollingCourseId === course.id}
+                    >
+                      {enrollingCourseId === course.id ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <ShoppingCart className="w-4 h-4 mr-2" />
+                      )}
                       {course.price > 0 ? `$${course.price}` : 'Enroll Now'}
                     </Button>
                     <Button 
@@ -299,8 +333,7 @@ const BrowseCoursesPage = () => {
           isOpen={!!previewCourse}
           onClose={() => setPreviewCourse(null)}
           onEnroll={() => {
-            // Handle enrollment logic here
-            console.log('Enrolling in course:', previewCourse.id)
+            handleEnroll(previewCourse.id, previewCourse.title)
             setPreviewCourse(null)
           }}
         />

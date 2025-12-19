@@ -8,9 +8,9 @@ import {
   Star,
   Search,
   Users,
-  Download,
   MoreVertical,
-  Loader2
+  Loader2,
+  RotateCcw
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -38,9 +38,10 @@ const MyCoursesPage = () => {
     }
 
     return {
-      id: enrollment.id,
+      id: course?.id || enrollment.course_id,
+      enrollmentId: enrollment.id,
       title: course?.title || 'Untitled Course',
-      instructor: course?.instructor_id || 'TBA',
+      instructor: course?.instructor || 'TBA',
       thumbnail: course?.thumbnail_url || '/api/placeholder/300/200',
       progress: progress,
       totalLessons: course?.total_lessons || 0,
@@ -63,15 +64,6 @@ const MyCoursesPage = () => {
     { value: 'completed', label: 'Completed', count: courses.filter(c => c.status === 'completed').length },
     { value: 'not-started', label: 'Not Started', count: courses.filter(c => c.status === 'not-started').length }
   ]
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-[#ed874a]" />
-        <span className="ml-2 text-gray-600">Loading your courses...</span>
-      </div>
-    )
-  }
 
   if (error) {
     return (
@@ -129,32 +121,34 @@ const MyCoursesPage = () => {
 
       {/* Filters and Search */}
       <Card className="mb-6">
-        <CardContent className="p-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                placeholder="Search courses..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <div className="flex gap-2">
-              {filterOptions.map(option => (
-                <button
-                  key={option.value}
-                  onClick={() => setFilterStatus(option.value)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    filterStatus === option.value
-                      ? 'bg-[#ed874a] text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  {option.label} ({option.count})
-                </button>
-              ))}
-            </div>
+        <CardContent className="p-4 sm:p-6">
+          {/* Search Bar */}
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
+              placeholder="Search courses..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          
+          {/* Filter Buttons - Grid layout for mobile */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {filterOptions.map(option => (
+              <button
+                key={option.value}
+                onClick={() => setFilterStatus(option.value)}
+                className={`px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors text-center ${
+                  filterStatus === option.value
+                    ? 'bg-[#ed874a] text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                <span className="block sm:inline">{option.label}</span>
+                <span className="text-[10px] sm:text-xs opacity-80 ml-0 sm:ml-1">({option.count})</span>
+              </button>
+            ))}
           </div>
         </CardContent>
       </Card>
@@ -235,15 +229,12 @@ const MyCoursesPage = () => {
               
               <div className="flex gap-2">
                 {course.status === 'completed' ? (
-                  <>
-                    <Button size="sm" variant="outline" className="flex-1">
-                      <Download className="w-4 h-4 mr-2" />
-                      Certificate
-                    </Button>
-                    <Button size="sm" variant="outline">
-                      Review
-                    </Button>
-                  </>
+                  <Button size="sm" className="flex-1 border-[#ed874a] text-[#ed874a] hover:bg-[#ed874a] hover:text-white" variant="outline" asChild>
+                    <Link href={`/dashboard/learner/courses/${course.id}`}>
+                      <RotateCcw className="w-4 h-4 mr-2" />
+                      Start Over
+                    </Link>
+                  </Button>
                 ) : (
                   <Button size="sm" className="flex-1 bg-[#ed874a] hover:bg-[#d76f32]" asChild>
                     <Link href={`/dashboard/learner/courses/${course.id}`}>

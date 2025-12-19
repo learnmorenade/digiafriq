@@ -103,11 +103,6 @@ const AffiliateDashboardLayout = ({ children, title = "Dashboard" }: AffiliateDa
       href: "/dashboard/affiliate"
     },
     { 
-      title: "Membership", 
-      icon: Award,
-      href: "/dashboard/affiliate/membership"
-    },
-    { 
       title: "Contests", 
       icon: Award,
       submenu: [

@@ -14,12 +14,24 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useCommissions } from '@/hooks/useReferrals'
 import { useProfile } from '@/lib/hooks/useProfile'
+import { useAuth } from '@/lib/supabase/auth'
+import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import Link from 'next/link'
-import { createWithdrawal, getUserWithdrawals } from '@/lib/withdrawals'
+import { createWithdrawal, getUserWithdrawals, formatWithdrawalAmount } from '@/lib/withdrawals'
 import type { Withdrawal, AccountDetails, BankAccountDetails, MobileMoneyDetails } from '@/lib/withdrawals'
 
+interface Payout {
+  id: string
+  amount: number
+  currency: string
+  status: string
+  created_at: string
+  reference?: string | null
+}
+
 const WithdrawalsPage = () => {
+  const { user } = useAuth()
   const [step, setStep] = useState(1) // 1: Amount & Method, 2: Confirmation, 3: Add Payment Method
   const [withdrawalAmount, setWithdrawalAmount] = useState('')
   const [selectedMethod, setSelectedMethod] = useState('')
@@ -142,6 +154,7 @@ const WithdrawalsPage = () => {
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [recentWithdrawals, setRecentWithdrawals] = useState<Withdrawal[]>([])
+  const [recentPayouts, setRecentPayouts] = useState<Payout[]>([])
 
   // Load user's recent withdrawals
   const loadWithdrawals = async () => {
@@ -149,10 +162,29 @@ const WithdrawalsPage = () => {
     setRecentWithdrawals(data.slice(0, 5)) // Show last 5
   }
 
+  // Load user's recent payout records (completed withdrawals)
+  const loadPayouts = async () => {
+    if (!user) return
+
+    const { data, error } = await (supabase as any)
+      .from('payouts')
+      .select('*')
+      .eq('affiliate_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(5)
+
+    if (!error && data) {
+      setRecentPayouts(data as Payout[])
+    } else {
+      setRecentPayouts([])
+    }
+  }
+
   // Load withdrawals on mount
   React.useEffect(() => {
     loadWithdrawals()
-  }, [])
+    loadPayouts()
+  }, [user])
 
   const handleConfirmWithdrawal = async () => {
     setIsSubmitting(true)
@@ -275,6 +307,71 @@ const WithdrawalsPage = () => {
     setSelectedMethod(methodId)
     setShowAddPaymentForm(false)
   }
+
+  const getStatusBadgeClasses = (status: string) => {
+    if (!status) return 'bg-gray-100 text-gray-800'
+    const normalized = status.toUpperCase()
+
+    switch (normalized) {
+      case 'PENDING':
+        return 'bg-yellow-100 text-yellow-800'
+      case 'APPROVED':
+        return 'bg-blue-100 text-blue-800'
+      case 'PROCESSING':
+        return 'bg-purple-100 text-purple-800'
+      case 'PAID':
+      case 'COMPLETED':
+        return 'bg-green-100 text-green-800'
+      case 'REJECTED':
+      case 'FAILED':
+        return 'bg-red-100 text-red-800'
+      default:
+        return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  const formatStatusLabel = (status: string) => {
+    if (!status) return '-'
+    const lower = status.toLowerCase()
+    return lower.charAt(0).toUpperCase() + lower.slice(1)
+  }
+
+  const formatDate = (date: string | null) => {
+    if (!date) return '-'
+    return new Date(date).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+
+  // Combine withdrawal requests and actual payouts into a single history list
+  const combinedHistory = [
+    ...recentWithdrawals.map(w => ({
+      id: w.id,
+      kind: 'request' as const,
+      amountUsd: w.amount_usd,
+      amountLocal: w.amount_local,
+      currency: w.currency,
+      status: w.status,
+      reference: w.reference,
+      created_at: w.created_at
+    })),
+    ...recentPayouts.map(p => ({
+      id: p.id,
+      kind: 'payout' as const,
+      amountUsd: p.amount,
+      amountLocal: null as number | null,
+      currency: p.currency,
+      status: p.status,
+      reference: p.reference || p.id.slice(0, 12).toUpperCase(),
+      created_at: p.created_at
+    }))
+  ]
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .slice(0, 5)
 
   // Show loading state while profile is loading
   if (profileLoading) {
@@ -636,6 +733,53 @@ const WithdrawalsPage = () => {
           </CardContent>
         </Card>
         </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold">Recent Withdrawals</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {combinedHistory.length === 0 ? (
+              <div className="text-center py-6 text-gray-500">
+                <p className="text-sm">You haven't requested any withdrawals yet.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {combinedHistory.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between py-3 border-b last:border-0"
+                  >
+                    <div>
+                      <p className="font-medium text-gray-900">
+                        {item.kind === 'request'
+                          ? `$${item.amountUsd.toFixed(2)} USD`
+                          : formatWithdrawalAmount(item.amountUsd, item.currency)}
+                      </p>
+                      {item.kind === 'request' && item.amountLocal && (
+                        <p className="text-sm text-gray-500">
+                          {formatWithdrawalAmount(item.amountLocal, item.currency)}
+                        </p>
+                      )}
+                      <p className="text-xs text-gray-500 mt-1">
+                        {formatDate(item.created_at)} 
+                        <span className="mx-1">•</span>
+                        Ref: {item.reference}
+                      </p>
+                    </div>
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeClasses(
+                        item.status
+                      )}`}
+                    >
+                      {formatStatusLabel(item.status)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Withdrawal Information */}
         <Card>

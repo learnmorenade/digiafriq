@@ -22,90 +22,55 @@ const SalesActivityPage = () => {
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(10)
   
-  // Transform commissions data to match the table format
-  const salesActivity = recentCommissions.map((commission, index) => ({
-    id: commission.id.slice(0, 8).toUpperCase(),
-    orderId: `ORD-${commission.id.slice(0, 12).toUpperCase()}`,
-    date: new Date(commission.created_at).toLocaleDateString('en-US'),
-    time: new Date(commission.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-    customer: `Customer ${index + 1}`,
-    email: '-',
-    customerId: '-',
-    commission: `${commission.amount.toFixed(2)} USD`,
-    commissionRate: `${commission.commission_rate}%`,
-    tier: 'Learner',
-    status: commission.status === 'approved' ? 'Completed' : commission.status === 'pending' ? 'Processing' : 'Failed',
-    statusColor: commission.status === 'approved' ? 'text-green-600 bg-green-100' : 
-                 commission.status === 'pending' ? 'text-yellow-600 bg-yellow-100' : 
-                 'text-red-600 bg-red-100'
-  }))
+  // Transform commissions data to match the table format (purely DB-driven)
+  const salesActivity = recentCommissions.map((commission, index) => {
+    const anyCommission = commission as any
 
-  // const recentClicks = [
-  //   {
-  //     date: "2024-09-29",
-  //     time: "10:30",
-  //     source: "Facebook",
-  //     course: "Digital Marketing Fundamentals",
-  //     converted: false,
-  //     ip: "192.168.1.1",
-  //     device: "Mobile"
-  //   },
-  //   {
-  //     date: "2024-09-29",
-  //     time: "08:15",
-  //     source: "Email",
-  //     course: "Social Media Strategy",
-  //     converted: false,
-  //     ip: "192.168.1.2",
-  //     device: "Desktop"
-  //   },
-  //   {
-  //     date: "2024-09-28",
-  //     time: "14:25",
-  //     source: "Facebook",
-  //     course: "Digital Marketing Fundamentals",
-  //     converted: true,
-  //     ip: "192.168.1.3",
-  //     device: "Mobile"
-  //   }
-  // ]
+    const amount = (anyCommission.amount ?? anyCommission.commission_amount ?? 0) as number
+    const type = (anyCommission.commission_type as string | undefined) || undefined
 
-  // const summaryStats = [
-  //   {
-  //     title: "Total Sales",
-  //     value: "4",
-  //     icon: ShoppingCart,
-  //     color: "text-blue-600",
-  //     bgColor: "bg-blue-100"
-  //   },
-  //   {
-  //     title: "Sales Value",
-  //     value: "450.00 USD",
-  //     icon: TrendingUp,
-  //     color: "text-green-600",
-  //     bgColor: "bg-green-100"
-  //   },
-  //   {
-  //     title: "Commission Earned",
-  //     value: "45.00 USD",
-  //     icon: TrendingUp,
-  //     color: "text-purple-600",
-  //     bgColor: "bg-purple-100"
-  //   },
-  //   {
-  //     title: "Conversion Rate",
-  //     value: "6.7%",
-  //     icon: Users,
-  //     color: "text-orange-600",
-  //     bgColor: "bg-orange-100"
-  //   }
-  // ]
+    const tier =
+      type === 'dcs_addon' || type === 'dcs'
+        ? 'DCS'
+        : type === 'learner_renewal'
+        ? 'Renewal'
+        : 'Learner'
 
-  // const topSources = [
-  //   { source: "Facebook", sales: 2, percentage: 50 },
-  //   { source: "Email Campaign", sales: 1, percentage: 25 },
-  //   { source: "WhatsApp", sales: 1, percentage: 25 }
-  // ]
+    const rawStatus = (anyCommission.status as string) || ''
+    const status =
+      rawStatus === 'paid' || rawStatus === 'available'
+        ? 'Completed'
+        : rawStatus === 'pending'
+        ? 'Pending'
+        : rawStatus === 'cancelled'
+        ? 'Cancelled'
+        : rawStatus || 'Unknown'
+
+    const statusColor =
+      status === 'Completed'
+        ? 'text-green-600 bg-green-100'
+        : status === 'Pending'
+        ? 'text-yellow-600 bg-yellow-100'
+        : status === 'Cancelled'
+        ? 'text-red-600 bg-red-100'
+        : 'text-gray-600 bg-gray-100'
+
+    return {
+      id: commission.id.slice(0, 8).toUpperCase(),
+      orderId: `ORD-${commission.id.slice(0, 12).toUpperCase()}`,
+      date: new Date(commission.created_at).toLocaleDateString('en-US'),
+      time: new Date(commission.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+      // We don't yet join to payments/profiles here, so use a generic customer label
+      customer: `Customer ${index + 1}`,
+      email: '-',
+      customerId: '-',
+      commission: `${amount.toFixed(2)} USD`,
+      commissionRate: commission.commission_rate ? `${commission.commission_rate}%` : '-',
+      tier,
+      status,
+      statusColor,
+    }
+  })
 
   // Pagination logic
   const totalItems = salesActivity.length

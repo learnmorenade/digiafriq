@@ -55,17 +55,15 @@ const AffiliateLayout: React.FC<AffiliateLayoutProps> = ({ children }) => {
     }
   };
 
-  // Show loading state within dashboard layout
+  // Show simple loading state without dashboard layout to avoid double loaders
   if (membershipLoading || loading || dcsLoading) {
     return (
-      <AffiliateDashboardLayout>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="text-center">
-            <Loader2 className="w-12 h-12 animate-spin text-[#ed874a] mx-auto mb-4" />
-            <p className="text-gray-600">Checking membership status...</p>
-          </div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <Loader2 className="w-10 h-10 animate-spin text-[#ed874a] mx-auto mb-3" />
+          <p className="text-gray-600 text-sm">Loading...</p>
         </div>
-      </AffiliateDashboardLayout>
+      </div>
     );
   }
 

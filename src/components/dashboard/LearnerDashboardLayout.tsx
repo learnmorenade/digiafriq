@@ -104,16 +104,6 @@ const LearnerDashboardLayout = ({ children, title = "Dashboard" }: LearnerDashbo
       href: "/dashboard/learner/membership"
     },
     { 
-      title: "Certificates", 
-      icon: Award,
-      href: "/dashboard/learner/certificates"
-    },
-    { 
-      title: "Downloads", 
-      icon: Download,
-      href: "/dashboard/learner/downloads"
-    },
-    { 
       title: "Profile Settings", 
       icon: User,
       href: "/dashboard/profile"

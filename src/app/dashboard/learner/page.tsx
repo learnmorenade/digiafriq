@@ -10,6 +10,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Image from 'next/image'
+import Link from 'next/link'
 import AffiliatePromoSection from '@/components/dashboard/AffiliatePromoSection'
 import { useLearnerData } from '@/lib/hooks/useLearnerData'
 
@@ -53,17 +54,6 @@ const LearnerDashboard = () => {
       iconBg: "bg-orange-100"
     }
   ]
-
-  if (loading) {
-    return (
-      <div className="p-6">
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-          <span className="ml-2 text-gray-600">Loading your dashboard...</span>
-        </div>
-      </div>
-    )
-  }
 
   if (error) {
     return (
@@ -131,9 +121,11 @@ const LearnerDashboard = () => {
             <div className="text-center py-8 text-gray-500">
               <BookOpen className="w-12 h-12 mx-auto mb-4 text-gray-300" />
               <p>No courses enrolled yet</p>
-              <Button className="mt-4 bg-[#ed874a] hover:bg-[#d76f32]">
-                Browse Courses
-              </Button>
+              <Link href="/dashboard/learner/browse">
+                <Button className="mt-4 bg-[#ed874a] hover:bg-[#d76f32]">
+                  Browse Courses
+                </Button>
+              </Link>
             </div>
           ) : (
             recentCourses.map((enrollment, index) => {
@@ -161,7 +153,7 @@ const LearnerDashboard = () => {
                       <div className="flex flex-col md:flex-row md:items-start md:justify-between mb-3">
                         <div className="flex-1">
                           <h4 className="font-semibold text-lg text-gray-900 mb-1">{course?.title || 'Untitled Course'}</h4>
-                          <p className="text-sm text-gray-600 mb-2">Instructor: {course?.instructor_id || 'TBA'}</p>
+                          <p className="text-sm text-gray-600 mb-2">Instructor: {course?.instructor || 'TBA'}</p>
                           <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
                             <span className="flex items-center">
                               <PlayCircle className="w-4 h-4 mr-1" />
@@ -183,8 +175,10 @@ const LearnerDashboard = () => {
                       </div>
                   
                       {/* Action Button */}
-                      <Button className="w-full md:w-auto bg-[#ed874a] hover:bg-[#d76f32]">
-                        {enrollment.progress_percentage > 0 ? 'Continue Learning' : 'Start Course'}
+                      <Button className="w-full md:w-auto bg-[#ed874a] hover:bg-[#d76f32]" asChild>
+                        <Link href={`/dashboard/learner/courses/${course?.id || (enrollment as any).course_id}`}>
+                          {enrollment.progress_percentage > 0 ? 'Continue Learning' : 'Start Course'}
+                        </Link>
                       </Button>
                     </div>
                   </div>

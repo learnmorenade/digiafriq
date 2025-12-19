@@ -19,7 +19,12 @@ import {
   MessageSquare,
   Menu,
   X,
-  ArrowLeft
+  ArrowLeft,
+  Maximize2,
+  Minimize2,
+  PanelLeftClose,
+  PanelLeft,
+  RotateCcw
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,6 +36,7 @@ import {
   fetchLessonProgress, 
   checkAndUpdateCourseCompletion,
   markLessonComplete,
+  resetCourseProgress,
   type Lesson,
   type Module,
   type CourseProgress,
@@ -55,6 +61,7 @@ const CoursePlayerPage = () => {
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [theaterMode, setTheaterMode] = useState(false);
   // const [isRealtime, setIsRealtime] = useState(false);
   const [courseStats, setCourseStats] = useState({
     totalLessons: 0,
@@ -72,7 +79,7 @@ const CoursePlayerPage = () => {
     setLoading(true);
     try {
       const mods = await fetchModulesAndLessons(courseId);
-      const prog = await fetchLessonProgress(userId);
+      const prog = await fetchLessonProgress(userId, courseId);
       
       console.log('Fetched modules:', mods);
       console.log('Fetched progress:', prog);
@@ -192,7 +199,58 @@ const CoursePlayerPage = () => {
   const handleLessonSelect = useCallback((lesson: Lesson) => {
     setSelectedLesson(lesson);
     setSidebarOpen(false); // Close sidebar on mobile
+    // Auto-enable theater mode when selecting a video lesson on desktop
+    if (lesson.type === 'video' && window.innerWidth >= 1024) {
+      setTheaterMode(true);
+    }
   }, []);
+
+  // Toggle theater mode
+  const toggleTheaterMode = useCallback(() => {
+    setTheaterMode(prev => !prev);
+  }, []);
+
+  // Handle course restart (Start Over)
+  const handleStartOver = useCallback(async () => {
+    if (!courseId) return;
+    
+    try {
+      const success = await resetCourseProgress(userId, courseId);
+      
+      if (success) {
+        // Reset local state
+        setProgress({});
+        setCourseProgress(null);
+        setCourseStats(prev => ({
+          ...prev,
+          completedLessons: 0
+        }));
+        
+        // Select first lesson
+        if (modules.length && modules[0].lessons.length) {
+          setSelectedLesson(modules[0].lessons[0]);
+        }
+        
+        toast({
+          title: "Course Reset",
+          description: "Your progress has been reset. You can start the course from the beginning.",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to reset course progress. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error resetting course:', error);
+      toast({
+        title: "Error",
+        description: "Failed to reset course progress. Please try again.",
+        variant: "destructive",
+      });
+    }
+  }, [courseId, userId, modules, toast]);
 
   // Calculate total duration
   const calculateTotalDuration = (modules: Module[]): string => {
@@ -237,7 +295,48 @@ const CoursePlayerPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-orange-50 via-white to-orange-100 dark:from-slate-900 dark:via-slate-900 dark:to-orange-900/20">
+    <div className={`min-h-screen bg-gradient-to-b from-orange-50 via-white to-orange-100 dark:from-slate-900 dark:via-slate-900 dark:to-orange-900/20 ${theaterMode ? 'theater-mode' : ''}`}>
+      {/* Theater Mode Header - Compact header when in theater mode */}
+      {theaterMode && (
+        <div className="hidden lg:flex bg-slate-900 text-white h-12 items-center justify-between px-4 fixed top-0 left-0 right-0 z-50">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleTheaterMode}
+              className="text-white hover:bg-slate-800"
+            >
+              <PanelLeft className="w-5 h-5 mr-2" />
+              Show Sidebar
+            </Button>
+            <span className="text-sm text-gray-300 truncate max-w-md">
+              {selectedLesson?.title || 'Course Player'}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-400">
+              {courseStats.completedLessons}/{courseStats.totalLessons} lessons • {progressPercentage}%
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleTheaterMode}
+              className="text-white hover:bg-slate-800"
+            >
+              <Minimize2 className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.back()}
+              className="text-white hover:bg-slate-800"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Mobile Header - Optimized for mobile first */}
       <div className="lg:hidden bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 h-16 flex items-center justify-between px-4 flex-shrink-0">
         <Button
@@ -259,21 +358,21 @@ const CoursePlayerPage = () => {
         </Button>
       </div>
 
-      <div className="flex">
-        {/* Sidebar - Mobile first responsive */}
+      <div className={`flex ${theaterMode ? 'lg:pt-12' : ''}`}>
+        {/* Sidebar - Mobile first responsive, hidden in theater mode on desktop */}
         <aside className={`
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-          lg:translate-x-0
-          fixed lg:static inset-y-0 left-0 z-50
-          w-80 lg:w-80 bg-white dark:bg-slate-800 border-r border-orange-100 dark:border-slate-700 
-          transition-transform duration-300 ease-in-out
+          ${theaterMode ? 'lg:-translate-x-full lg:w-0 lg:opacity-0' : 'lg:translate-x-0 lg:w-80 lg:opacity-100'}
+          fixed lg:static inset-y-0 left-0 z-40
+          w-80 bg-white dark:bg-slate-800 border-r border-orange-100 dark:border-slate-700 
+          transition-all duration-300 ease-in-out
           lg:sticky lg:top-0 lg:h-screen
           shadow-lg lg:shadow-none
         `}>
           <div className="p-4 lg:p-6 h-full overflow-y-auto">
           {/* Sidebar Header with Close Button (Mobile) */}
           <div className="flex items-center justify-between mb-4 lg:mb-6">
-            <div className="hidden lg:block">
+            <div className="hidden lg:flex items-center gap-2">
               <Button
                 variant="ghost"
                 onClick={() => router.back()}
@@ -281,6 +380,15 @@ const CoursePlayerPage = () => {
               >
                 <ArrowLeft className="w-4 h-4" />
                 Back to Courses
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={toggleTheaterMode}
+                className="text-gray-600 hover:text-gray-900"
+                title="Enter Theater Mode"
+              >
+                <Maximize2 className="w-4 h-4" />
               </Button>
             </div>
             <button 
@@ -505,16 +613,26 @@ const CoursePlayerPage = () => {
                             {courseStats.completedLessons} of {courseStats.totalLessons} lessons completed
                           </div>
                           {courseProgress?.completed && (
-                            <div className="mt-3 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                              <div className="flex items-center gap-2 text-green-700 dark:text-green-300">
-                                <CheckCircle className="w-4 h-4" />
-                                <span className="text-sm font-medium">Course Completed!</span>
-                              </div>
-                              {courseProgress.completed_at && (
-                                <div className="text-xs text-green-600 dark:text-green-400 mt-1">
-                                  Completed on {new Date(courseProgress.completed_at).toLocaleDateString()}
+                            <div className="mt-3 space-y-3">
+                              <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                                <div className="flex items-center gap-2 text-green-700 dark:text-green-300">
+                                  <CheckCircle className="w-4 h-4" />
+                                  <span className="text-sm font-medium">Course Completed!</span>
                                 </div>
-                              )}
+                                {courseProgress.completed_at && (
+                                  <div className="text-xs text-green-600 dark:text-green-400 mt-1">
+                                    Completed on {new Date(courseProgress.completed_at).toLocaleDateString()}
+                                  </div>
+                                )}
+                              </div>
+                              <Button 
+                                onClick={handleStartOver}
+                                variant="outline"
+                                className="w-full border-[#ed874a] text-[#ed874a] hover:bg-[#ed874a] hover:text-white"
+                              >
+                                <RotateCcw className="w-4 h-4 mr-2" />
+                                Start Over
+                              </Button>
                             </div>
                           )}
                         </div>

@@ -131,13 +131,13 @@ const CommissionsManagement = () => {
     }
   }
 
-  const totalCommissions = commissions.reduce((sum, c) => sum + c.amount, 0)
+  const totalCommissions = commissions.reduce((sum, c) => sum + (c.amount || 0), 0)
   const approvedCommissions = commissions
     .filter(c => c.status === 'approved')
-    .reduce((sum, c) => sum + c.amount, 0)
+    .reduce((sum, c) => sum + (c.amount || 0), 0)
   const pendingCommissions = commissions
     .filter(c => c.status === 'pending')
-    .reduce((sum, c) => sum + c.amount, 0)
+    .reduce((sum, c) => sum + (c.amount || 0), 0)
 
   return (
     <AdminDashboardLayout title="Commissions Management">
@@ -254,12 +254,12 @@ const CommissionsManagement = () => {
                   {filteredCommissions.map((commission) => (
                     <tr key={commission.id} className="border-b border-gray-100 hover:bg-gray-50">
                       <td className="py-3 px-4">
-                        <span className="font-mono text-sm text-gray-900">{commission.affiliate_id.slice(0, 8)}...</span>
+                        <span className="font-mono text-sm text-gray-900">{commission.affiliate_id?.slice(0, 8) || 'N/A'}...</span>
                       </td>
                       <td className="py-3 px-4">
-                        <span className="font-semibold text-gray-900">${commission.amount.toFixed(2)}</span>
+                        <span className="font-semibold text-gray-900">${(commission.amount || 0).toFixed(2)}</span>
                       </td>
-                      <td className="py-3 px-4 text-sm text-gray-600">{commission.commission_rate}%</td>
+                      <td className="py-3 px-4 text-sm text-gray-600">{commission.commission_rate || 0}%</td>
                       <td className="py-3 px-4">
                         <div className="flex items-center space-x-2">
                           {getStatusIcon(commission.status)}

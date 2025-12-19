@@ -74,6 +74,26 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     };
   }, [onProgress, onEnded]);
 
+  // Sync state with video element when restored from bfcache
+  useEffect(() => {
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) {
+        const video = videoRef.current;
+        if (video) {
+          // Sync React state with actual video element state
+          setIsPlaying(!video.paused);
+          setCurrentTime(video.currentTime);
+          setDuration(video.duration || 0);
+          setIsMuted(video.muted);
+          setVolume(video.volume);
+        }
+      }
+    };
+
+    window.addEventListener('pageshow', handlePageShow);
+    return () => window.removeEventListener('pageshow', handlePageShow);
+  }, []);
+
   const togglePlay = () => {
     const video = videoRef.current;
     if (!video) return;

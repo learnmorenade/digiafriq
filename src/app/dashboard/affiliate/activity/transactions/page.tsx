@@ -25,134 +25,71 @@ const TransactionsPage = () => {
   const [typeFilter, setTypeFilter] = useState('All Types')
   const [statusFilter, setStatusFilter] = useState('All Status')
 
-  // Combine commissions and payouts into transactions
+  // Combine commissions and payouts into transactions (no mock fallback)
   const allTransactions = [
-    ...recentCommissions.map(commission => ({
-      id: commission.id.slice(0, 10).toUpperCase(),
-      date: new Date(commission.created_at).toLocaleDateString('en-US'),
-      type: 'Commission Earned',
-      description: `Commission earned - ${commission.status}`,
-      amount: `+${commission.amount.toFixed(2)} USD`,
-      status: commission.status === 'approved' ? 'Completed' : commission.status === 'pending' ? 'Pending' : 'Failed',
-      statusColor: commission.status === 'approved' ? 'text-gray-700 bg-gray-100' : 
-                   commission.status === 'pending' ? 'text-yellow-600 bg-yellow-100' : 
-                   'text-red-600 bg-red-100',
-      category: 'commission',
-      reference: commission.id.slice(0, 12).toUpperCase()
-    })),
+    ...recentCommissions.map(commission => {
+      const anyCommission = commission as any
+      const amount = (anyCommission.amount ?? anyCommission.commission_amount ?? 0) as number
+
+      const rawStatus = (anyCommission.status as string) || ''
+      const status =
+        rawStatus === 'paid' || rawStatus === 'available'
+          ? 'Completed'
+          : rawStatus === 'pending'
+          ? 'Pending'
+          : rawStatus === 'cancelled'
+          ? 'Cancelled'
+          : rawStatus || 'Unknown'
+
+      const statusColor =
+        status === 'Completed'
+          ? 'text-gray-700 bg-gray-100'
+          : status === 'Pending'
+          ? 'text-yellow-600 bg-yellow-100'
+          : status === 'Cancelled'
+          ? 'text-red-600 bg-red-100'
+          : 'text-gray-700 bg-gray-100'
+
+      return {
+        id: commission.id.slice(0, 10).toUpperCase(),
+        date: new Date(commission.created_at).toLocaleDateString('en-US'),
+        type: 'Commission Earned',
+        description: `Commission earned - ${status}`,
+        amount: `+${amount.toFixed(2)} USD`,
+        status,
+        statusColor,
+        category: 'commission',
+        reference: commission.id.slice(0, 12).toUpperCase(),
+      }
+    }),
     ...recentPayouts.map(payout => ({
       id: payout.id.slice(0, 10).toUpperCase(),
       date: new Date(payout.created_at).toLocaleDateString('en-US'),
       type: payout.status === 'completed' ? 'Withdrawal' : 'Withdrawal Processing',
       description: `Payout ${payout.status}${payout.reference ? ` - Ref: ${payout.reference}` : ''}`,
       amount: `-${payout.amount.toFixed(2)} USD`,
-      status: payout.status === 'completed' ? 'Completed' : 
-              payout.status === 'processing' ? 'Processing' : 
-              payout.status === 'pending' ? 'Pending' : 'Failed',
-      statusColor: payout.status === 'completed' ? 'text-gray-700 bg-gray-100' : 
-                   payout.status === 'processing' ? 'text-blue-600 bg-blue-100' : 
-                   payout.status === 'pending' ? 'text-yellow-600 bg-yellow-100' : 
-                   'text-red-600 bg-red-100',
+      status:
+        payout.status === 'completed'
+          ? 'Completed'
+          : payout.status === 'processing'
+          ? 'Processing'
+          : payout.status === 'pending'
+          ? 'Pending'
+          : 'Failed',
+      statusColor:
+        payout.status === 'completed'
+          ? 'text-gray-700 bg-gray-100'
+          : payout.status === 'processing'
+          ? 'text-blue-600 bg-blue-100'
+          : payout.status === 'pending'
+          ? 'text-yellow-600 bg-yellow-100'
+          : 'text-red-600 bg-red-100',
       category: 'withdrawal',
-      reference: payout.reference || payout.id.slice(0, 12).toUpperCase()
-    }))
+      reference: payout.reference || payout.id.slice(0, 12).toUpperCase(),
+    })),
   ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
-  const transactions = allTransactions.length > 0 ? allTransactions : [
-    {
-      id: "TXN001234",
-      date: "2024-09-28",
-      type: "Commission Earned",
-      description: "Commission from John Doe referral - Digital Marketing Fundamentals",
-      amount: "+10.00 USD",
-      status: "Completed",
-      statusColor: "text-gray-700 bg-gray-100",
-      category: "commission",
-      reference: "REF-DM-001"
-    },
-    {
-      id: "TXN001235",
-      date: "2024-09-27",
-      type: "Withdrawal",
-      description: "Withdrawal to Bank Account - **** 1234",
-      amount: "-40.00 USD",
-      status: "Processing",
-      statusColor: "text-yellow-600 bg-yellow-100",
-      category: "withdrawal",
-      reference: "WD001234"
-    },
-    {
-      id: "TXN001236",
-      date: "2024-09-25",
-      type: "Commission Earned",
-      description: "Commission from Jane Smith referral - Social Media Strategy",
-      amount: "+15.00 USD",
-      status: "Completed",
-      statusColor: "text-gray-700 bg-gray-100",
-      category: "commission",
-      reference: "REF-SM-002"
-    },
-    {
-      id: "TXN001237",
-      date: "2024-09-24",
-      type: "Withdrawal Fee",
-      description: "PayPal withdrawal fee",
-      amount: "-0.63 USD",
-      status: "Completed",
-      statusColor: "text-gray-700 bg-gray-100",
-      category: "fee",
-      reference: "WD001233"
-    },
-    {
-      id: "TXN001238",
-      date: "2024-09-20",
-      type: "Commission Earned",
-      description: "Commission from Mike Johnson referral - Content Creation Mastery",
-      amount: "+12.00 USD",
-      status: "Completed",
-      statusColor: "text-gray-700 bg-gray-100",
-      category: "commission",
-      reference: "REF-CC-003"
-    },
-    {
-      id: "TXN001239",
-      date: "2024-09-18",
-      type: "Commission Pending",
-      description: "Commission from Sarah Wilson referral - Email Marketing Pro",
-      amount: "+8.00 USD",
-      status: "Pending",
-      statusColor: "text-yellow-600 bg-yellow-100",
-      category: "commission",
-      reference: "REF-EM-004"
-    },
-    {
-      id: "TXN001240",
-      date: "2024-09-15",
-      type: "Commission Rejected",
-      description: "Commission rejected - Customer refund",
-      amount: "-20.00 USD",
-      status: "Rejected",
-      statusColor: "text-red-600 bg-red-100",
-      category: "commission",
-      reference: "REF-SEO-005"
-    },
-    {
-      id: "TXN001241",
-      date: "2024-09-10",
-      type: "Withdrawal",
-      description: "Withdrawal to PayPal - ****@email.com",
-      amount: "-25.00 USD",
-      status: "Completed",
-      statusColor: "text-gray-700 bg-gray-100",
-      category: "withdrawal",
-      reference: "WD001235"
-    }
-  ]
-
-  // const summaryStats = [
-  //   {
-  //     title: "Total Income",
-  //     value: "+45.00 USD",
+  const transactions = allTransactions
   //     icon: ArrowUpRight,
   //     color: "text-green-600",
   //     bgColor: "bg-green-100"

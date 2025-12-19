@@ -11,10 +11,13 @@ interface Course {
   thumbnail_url: string
   price: number
   instructor_id: string
+  instructor: string
   is_published: boolean
   total_lessons: number
   estimated_duration: number
+  duration: string
   category: string
+  level: string
   tags: string[]
   created_at: string
   updated_at: string
@@ -78,10 +81,34 @@ export const useBrowseCourses = (): BrowseCoursesData => {
         promises.push(
           supabase
             .from('courses')
-            .select('id, title, description, thumbnail_url, price, instructor_id, is_published, total_lessons, estimated_duration, category, tags, created_at, updated_at')
+            .select(`
+              id, title, description, thumbnail_url, price, instructor_id, instructor, 
+              is_published, total_lessons, estimated_duration, duration, category, level, tags, 
+              created_at, updated_at,
+              modules (
+                id,
+                lessons (
+                  id
+                )
+              )
+            `)
             .eq('is_published', true)
             .order('created_at', { ascending: false })
-            .then(result => result)
+            .then(result => {
+              // Calculate actual lesson count from modules/lessons
+              if (result.data) {
+                result.data = result.data.map((course: any) => {
+                  const lessonCount = course.modules?.reduce((sum: number, mod: any) => 
+                    sum + (mod.lessons?.length || 0), 0) || 0
+                  return {
+                    ...course,
+                    total_lessons: lessonCount > 0 ? lessonCount : course.total_lessons,
+                    modules: undefined // Remove modules from response to keep it clean
+                  }
+                })
+              }
+              return result
+            })
         )
       } else {
         promises.push(Promise.resolve({ data: coursesData, error: null }))

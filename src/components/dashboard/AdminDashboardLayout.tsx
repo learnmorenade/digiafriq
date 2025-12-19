@@ -53,7 +53,6 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({ children, t
         { title: "Payments", href: "/dashboard/admin/payments" },
         { title: "Withdrawals", href: "/dashboard/admin/withdrawals" },
         { title: "Commissions", href: "/dashboard/admin/commissions" },
-        { title: "Payouts", href: "/dashboard/admin/payouts" },
         { title: "Revenue", href: "/dashboard/admin/revenue" }
       ]
     },

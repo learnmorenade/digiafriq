@@ -18,6 +18,7 @@ export default function LearnerLayout({
   // Membership and checkout pages should always be accessible
   const isMembershipPage = pathname === '/dashboard/learner/membership';
   const isCheckoutPage = pathname?.startsWith('/dashboard/learner/membership/checkout');
+  const isCoursePlayerPage = pathname?.startsWith('/dashboard/learner/courses/') && pathname !== '/dashboard/learner/courses';
   const isPaymentRelatedPage = isMembershipPage || isCheckoutPage;
 
   useEffect(() => {
@@ -33,37 +34,38 @@ export default function LearnerLayout({
     return () => clearTimeout(redirectTimer);
   }, [hasLearnerMembership, loading, isPaymentRelatedPage, router]);
 
-  // Show loading state within dashboard layout
+  // Show simple loading state without dashboard layout to avoid double loaders
   if (loading) {
     return (
-      <LearnerDashboardLayout>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="text-center">
-            <Loader2 className="w-12 h-12 animate-spin text-[#ed874a] mx-auto mb-4" />
-            <p className="text-gray-600">Loading...</p>
-          </div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <Loader2 className="w-10 h-10 animate-spin text-[#ed874a] mx-auto mb-3" />
+          <p className="text-gray-600 text-sm">Loading...</p>
         </div>
-      </LearnerDashboardLayout>
+      </div>
     );
   }
 
   // If user doesn't have learner membership and tries to access non-payment pages, they'll be redirected by useEffect
-  // But we still render payment-related pages or show loading during redirect
+  // Show simple redirect loading without dashboard layout
   if (!hasLearnerMembership && !isPaymentRelatedPage) {
     return (
-      <LearnerDashboardLayout>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="text-center">
-            <Loader2 className="w-12 h-12 animate-spin text-[#ed874a] mx-auto mb-4" />
-            <p className="text-gray-600">Redirecting to membership...</p>
-          </div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <Loader2 className="w-10 h-10 animate-spin text-[#ed874a] mx-auto mb-3" />
+          <p className="text-gray-600 text-sm">Redirecting...</p>
         </div>
-      </LearnerDashboardLayout>
+      </div>
     );
   }
 
   // Render checkout page without dashboard layout
   if (isCheckoutPage) {
+    return <>{children}</>;
+  }
+
+  // Render course player page without dashboard layout (fullscreen experience)
+  if (isCoursePlayerPage) {
     return <>{children}</>;
   }
 

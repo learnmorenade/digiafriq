@@ -265,6 +265,38 @@ export async function searchCourses(query: string, category?: string) {
   return data
 }
 
+// Enroll user in a course
+export async function enrollInCourse(courseId: string) {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('User not authenticated')
+
+  // Check if already enrolled
+  const { data: existingEnrollment } = await supabase
+    .from('enrollments')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('course_id', courseId)
+    .single()
+
+  if (existingEnrollment) {
+    return { alreadyEnrolled: true, enrollment: existingEnrollment }
+  }
+
+  // Create new enrollment
+  const { data, error } = await supabase
+    .from('enrollments')
+    .insert({
+      user_id: user.id,
+      course_id: courseId,
+      progress_percentage: 0
+    })
+    .select()
+    .single()
+
+  if (error) throw error
+  return { alreadyEnrolled: false, enrollment: data }
+}
+
 // Get featured courses (you can customize this logic)
 export async function getFeaturedCourses(limit = 6) {
   const { data, error } = await supabase

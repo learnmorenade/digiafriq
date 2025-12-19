@@ -1,5 +1,5 @@
-// Mock data functions for course content
-// Replace these with actual Supabase queries when backend is ready
+// Course data functions - fetches real data from Supabase
+import { supabase } from './supabase/client';
 
 export interface Lesson {
   id: string;
@@ -32,175 +32,331 @@ export interface CourseProgressData {
   last_accessed: string;
 }
 
-// Mock data - replace with actual Supabase queries
-const mockModules: Module[] = [
-  {
-    id: "module-1",
-    title: "Introduction to Web Development",
-    description: "Learn the basics of web development",
-    order_index: 1,
-    lessons: [
-      {
-        id: "lesson-1",
-        title: "What is Web Development?",
-        description: "An overview of web development and its importance in today's digital world.",
-        lesson_note: "Welcome to the course! This lesson will give you a solid foundation to build upon.",
-        type: "video",
-        content_url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-        duration: "15:30",
-        order_index: 1
-      },
-      {
-        id: "lesson-2",
-        title: "Setting Up Your Development Environment",
-        description: "Learn how to set up your computer for web development.",
-        lesson_note: "Make sure to follow along and set up your environment as we go through this lesson.",
-        type: "video",
-        content_url: "https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_2mb.mp4",
-        duration: "22:45",
-        order_index: 2
-      },
-      {
-        id: "lesson-3",
-        title: "Course Resources",
-        description: "Download the course materials and resources.",
-        type: "file",
-        content_url: "",
-        file_url: "/course-resources.zip",
-        duration: "5:00",
-        order_index: 3
-      }
-    ]
-  },
-  {
-    id: "module-2",
-    title: "HTML Fundamentals",
-    description: "Master the building blocks of web pages",
-    order_index: 2,
-    lessons: [
-      {
-        id: "lesson-4",
-        title: "HTML Structure and Syntax",
-        description: "Learn the basic structure and syntax of HTML documents.",
-        lesson_note: "HTML is the foundation of all web pages. Pay close attention to the structure!",
-        type: "video",
-        content_url: "https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4",
-        duration: "18:20",
-        order_index: 1
-      },
-      {
-        id: "lesson-5",
-        title: "Common HTML Elements",
-        description: "Explore the most commonly used HTML elements and their purposes.",
-        type: "text",
-        content_url: `
-          <h2>Common HTML Elements</h2>
-          <p>HTML provides many elements for structuring content. Here are some of the most important ones:</p>
-          
-          <h3>Headings</h3>
-          <p>Use h1 through h6 for headings, with h1 being the most important.</p>
-          
-          <h3>Paragraphs</h3>
-          <p>The p element is used for paragraphs of text.</p>
-          
-          <h3>Links</h3>
-          <p>The a element creates hyperlinks to other pages or resources.</p>
-          
-          <h3>Images</h3>
-          <p>The img element displays images on your web page.</p>
-        `,
-        duration: "12:00",
-        order_index: 2
-      }
-    ]
-  },
-  {
-    id: "module-3",
-    title: "CSS Styling",
-    description: "Make your websites beautiful with CSS",
-    order_index: 3,
-    lessons: [
-      {
-        id: "lesson-6",
-        title: "CSS Basics",
-        description: "Introduction to CSS and how it works with HTML.",
-        lesson_note: "CSS is what makes websites look good. Take your time with this one!",
-        type: "video",
-        content_url: "https://youtu.be/1Rs2ND1ryYc",
-        duration: "25:15",
-        order_index: 1
-      }
-    ]
+// Helper to format duration from minutes to "MM:SS" or "HH:MM" format
+const formatDuration = (durationMinutes: number | null): string => {
+  if (!durationMinutes) return "0:00";
+  const hours = Math.floor(durationMinutes / 60);
+  const minutes = Math.floor(durationMinutes % 60);
+  if (hours > 0) {
+    return `${hours}:${minutes.toString().padStart(2, '0')}`;
   }
-];
-
-export const fetchModulesAndLessons = async (programId: string): Promise<Module[]> => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  
-  // In a real implementation, this would be a Supabase query like:
-  // const { data, error } = await supabase
-  //   .from('modules')
-  //   .select(`
-  //     *,
-  //     lessons (*)
-  //   `)
-  //   .eq('program_id', programId)
-  //   .order('order_index');
-  
-  return mockModules;
+  return `${minutes}:00`;
 };
 
-export const fetchLessonProgress = async (userId: string): Promise<CourseProgress> => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 500));
+export const fetchModulesAndLessons = async (courseId: string): Promise<Module[]> => {
+  console.log('Fetching modules and lessons for course:', courseId);
   
-  // In a real implementation, this would be a Supabase query like:
-  // const { data, error } = await supabase
-  //   .from('lesson_progress')
-  //   .select('lesson_id, completed')
-  //   .eq('user_id', userId);
+  // Fetch modules with their lessons from Supabase
+  const { data: modulesData, error: modulesError } = await supabase
+    .from('modules')
+    .select(`
+      id,
+      title,
+      description,
+      order_index,
+      lessons (
+        id,
+        title,
+        description,
+        content,
+        video_url,
+        file_url,
+        lesson_type,
+        duration,
+        order_index,
+        instructor_notes
+      )
+    `)
+    .eq('course_id', courseId)
+    .order('order_index', { ascending: true });
+
+  if (modulesError) {
+    console.error('Error fetching modules:', modulesError);
+    throw modulesError;
+  }
+
+  if (!modulesData || modulesData.length === 0) {
+    console.log('No modules found for course:', courseId);
+    return [];
+  }
+
+  // Transform the data to match our interface
+  const modules: Module[] = modulesData.map((mod: any) => ({
+    id: mod.id,
+    title: mod.title,
+    description: mod.description || '',
+    order_index: mod.order_index,
+    lessons: (mod.lessons || [])
+      .sort((a: any, b: any) => a.order_index - b.order_index)
+      .map((lesson: any) => ({
+        id: lesson.id,
+        title: lesson.title,
+        description: lesson.description || '',
+        lesson_note: lesson.instructor_notes || undefined,
+        type: lesson.lesson_type as 'video' | 'text' | 'file',
+        content_url: lesson.video_url || lesson.content || '',
+        file_url: lesson.file_url || undefined,
+        duration: formatDuration(lesson.duration),
+        order_index: lesson.order_index
+      }))
+  }));
+
+  console.log('Fetched modules:', modules);
+  return modules;
+};
+
+export const fetchLessonProgress = async (userId: string, courseId?: string): Promise<CourseProgress> => {
+  console.log('Fetching lesson progress for user:', userId);
   
-  // Mock progress data
-  return {
-    "lesson-1": true,
-    "lesson-2": false,
-    "lesson-3": false,
-    "lesson-4": false,
-    "lesson-5": false,
-    "lesson-6": false
-  };
+  // Get current user if userId is a placeholder
+  let actualUserId = userId;
+  if (userId === 'demo-user-123') {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      actualUserId = user.id;
+    } else {
+      console.log('No authenticated user found');
+      return {};
+    }
+  }
+
+  // First get the enrollment for this course
+  let enrollmentId: string | null = null;
+  if (courseId) {
+    const { data: enrollment } = await supabase
+      .from('enrollments')
+      .select('id')
+      .eq('user_id', actualUserId)
+      .eq('course_id', courseId)
+      .single();
+    
+    enrollmentId = enrollment?.id || null;
+  }
+
+  // Fetch lesson progress from database
+  let query = supabase
+    .from('lesson_progress')
+    .select('lesson_id, is_completed')
+    .eq('user_id', actualUserId);
+  
+  if (enrollmentId) {
+    query = query.eq('enrollment_id', enrollmentId);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('Error fetching lesson progress:', error);
+    return {};
+  }
+
+  // Transform to CourseProgress format
+  const progress: CourseProgress = {};
+  if (data) {
+    data.forEach((item: any) => {
+      progress[item.lesson_id] = item.is_completed;
+    });
+  }
+
+  console.log('Fetched progress:', progress);
+  return progress;
 };
 
 export const checkAndUpdateCourseCompletion = async (
   userId: string, 
-  programId: string
+  courseId: string
 ): Promise<boolean> => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 300));
+  console.log('Checking course completion for user:', userId, 'course:', courseId);
   
-  // In a real implementation, this would check if all lessons are completed
-  // and update the course_progress table accordingly
-  
-  return false; // Mock: course not completed
+  // Get current user if userId is a placeholder
+  let actualUserId = userId;
+  if (userId === 'demo-user-123') {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      actualUserId = user.id;
+    } else {
+      return false;
+    }
+  }
+
+  // Get enrollment
+  const { data: enrollment } = await supabase
+    .from('enrollments')
+    .select('id, progress_percentage')
+    .eq('user_id', actualUserId)
+    .eq('course_id', courseId)
+    .single();
+
+  if (!enrollment) {
+    console.log('No enrollment found');
+    return false;
+  }
+
+  // Get total lessons in the course
+  const { data: modules } = await supabase
+    .from('modules')
+    .select('lessons(id)')
+    .eq('course_id', courseId);
+
+  const totalLessons = modules?.reduce((sum: number, mod: any) => 
+    sum + (mod.lessons?.length || 0), 0) || 0;
+
+  if (totalLessons === 0) {
+    return false;
+  }
+
+  // Get completed lessons count
+  const { count: completedCount } = await supabase
+    .from('lesson_progress')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', actualUserId)
+    .eq('enrollment_id', enrollment.id)
+    .eq('is_completed', true);
+
+  const progressPercentage = Math.round(((completedCount || 0) / totalLessons) * 100);
+  const isCompleted = progressPercentage >= 100;
+
+  // Update enrollment progress
+  await supabase
+    .from('enrollments')
+    .update({ 
+      progress_percentage: progressPercentage,
+      completed_at: isCompleted ? new Date().toISOString() : null
+    })
+    .eq('id', enrollment.id);
+
+  console.log('Course progress:', progressPercentage, '% - Completed:', isCompleted);
+  return isCompleted;
 };
 
 export const markLessonComplete = async (
   userId: string,
   lessonId: string
 ): Promise<boolean> => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 500));
+  console.log('Marking lesson complete:', lessonId, 'for user:', userId);
   
-  // In a real implementation, this would be a Supabase query like:
-  // const { data, error } = await supabase
-  //   .from('lesson_progress')
-  //   .upsert({
-  //     user_id: userId,
-  //     lesson_id: lessonId,
-  //     completed: true,
-  //     completed_at: new Date().toISOString()
-  //   });
+  // Get current user if userId is a placeholder
+  let actualUserId = userId;
+  if (userId === 'demo-user-123') {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      actualUserId = user.id;
+    } else {
+      console.error('No authenticated user found');
+      return false;
+    }
+  }
+
+  // Get the lesson's course via module
+  const { data: lesson } = await supabase
+    .from('lessons')
+    .select('module_id, modules(course_id)')
+    .eq('id', lessonId)
+    .single();
+
+  if (!lesson) {
+    console.error('Lesson not found');
+    return false;
+  }
+
+  const courseId = (lesson.modules as any)?.course_id;
+  if (!courseId) {
+    console.error('Course not found for lesson');
+    return false;
+  }
+
+  // Get enrollment
+  const { data: enrollment } = await supabase
+    .from('enrollments')
+    .select('id')
+    .eq('user_id', actualUserId)
+    .eq('course_id', courseId)
+    .single();
+
+  if (!enrollment) {
+    console.error('No enrollment found for this course');
+    return false;
+  }
+
+  // Upsert lesson progress
+  const { error } = await supabase
+    .from('lesson_progress')
+    .upsert({
+      user_id: actualUserId,
+      lesson_id: lessonId,
+      enrollment_id: enrollment.id,
+      is_completed: true,
+      completed_at: new Date().toISOString()
+    }, {
+      onConflict: 'user_id,lesson_id'
+    });
+
+  if (error) {
+    console.error('Error marking lesson complete:', error);
+    return false;
+  }
+
+  console.log('Lesson marked as complete successfully');
+  return true;
+};
+
+export const resetCourseProgress = async (
+  userId: string,
+  courseId: string
+): Promise<boolean> => {
+  console.log('Resetting course progress for user:', userId, 'course:', courseId);
   
+  // Get current user if userId is a placeholder
+  let actualUserId = userId;
+  if (userId === 'demo-user-123') {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      actualUserId = user.id;
+    } else {
+      console.error('No authenticated user found');
+      return false;
+    }
+  }
+
+  // Get enrollment
+  const { data: enrollment } = await supabase
+    .from('enrollments')
+    .select('id')
+    .eq('user_id', actualUserId)
+    .eq('course_id', courseId)
+    .single();
+
+  if (!enrollment) {
+    console.error('No enrollment found for this course');
+    return false;
+  }
+
+  // Delete all lesson progress for this enrollment
+  const { error: deleteError } = await supabase
+    .from('lesson_progress')
+    .delete()
+    .eq('user_id', actualUserId)
+    .eq('enrollment_id', enrollment.id);
+
+  if (deleteError) {
+    console.error('Error deleting lesson progress:', deleteError);
+    return false;
+  }
+
+  // Reset enrollment progress
+  const { error: updateError } = await supabase
+    .from('enrollments')
+    .update({ 
+      progress_percentage: 0,
+      completed_at: null
+    })
+    .eq('id', enrollment.id);
+
+  if (updateError) {
+    console.error('Error resetting enrollment:', updateError);
+    return false;
+  }
+
+  console.log('Course progress reset successfully');
   return true;
 };

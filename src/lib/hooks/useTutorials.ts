@@ -6,17 +6,19 @@ interface Tutorial {
   id: string
   title: string
   description: string
-  type: 'video' | 'article' | 'webinar'
+  instructor: string
+  thumbnail_url: string | null
   duration: string
   category: string
-  difficulty: 'Beginner' | 'Intermediate' | 'Advanced'
+  level: string
+  difficulty: string // alias for level for backward compatibility
   views: number
   rating: number
-  thumbnail_url?: string
-  video_url?: string
-  content?: string
   is_featured: boolean
+  is_published: boolean
   created_at: string
+  modules_count?: number
+  lessons_count?: number
 }
 
 interface TutorialsData {
@@ -38,47 +40,33 @@ export const useTutorials = (): TutorialsData => {
         setLoading(true)
         setError(null)
 
-        // Try to fetch real tutorials data
-        try {
-          const { data: tutorialsData, error: tutorialsError } = await (supabase as any)
-            .from('tutorials')
-            .select('*')
-            .order('created_at', { ascending: false })
+        // Fetch only published tutorials for affiliates
+        const { data: tutorialsData, error: tutorialsError } = await supabase
+          .from('tutorials')
+          .select('*')
+          .eq('is_published', true)
+          .order('created_at', { ascending: false })
 
-          if (tutorialsError) {
-            console.warn('Failed to fetch tutorials, using fallback data:', tutorialsError.message)
-            console.warn('This usually means the tutorials table does not exist yet.')
-            console.warn('Please apply the migration: create_tutorials_table.sql')
-            throw new Error('FALLBACK_DATA')
-          }
-
-          setTutorials(tutorialsData || [])
-          
-          // Find featured tutorial
-          const featured = tutorialsData?.find((t: Tutorial) => t.is_featured)
-          setFeaturedTutorial(featured || null)
-
-        } catch (dbError: any) {
-          // If database error or table doesn't exist, show error
-          if (dbError.message === 'FALLBACK_DATA' || 
-              dbError.message.includes('relation') ||
-              dbError.message.includes('table') ||
-              dbError.message.includes('does not exist')) {
-            
-            console.error('Tutorials table does not exist. Please apply the migration.')
-            setError('Tutorials table not found. Please contact administrator.')
-            setTutorials([])
-            setFeaturedTutorial(null)
-          } else {
-            throw dbError
-          }
+        if (tutorialsError) {
+          console.warn('Failed to fetch tutorials:', tutorialsError.message)
+          throw tutorialsError
         }
+
+        // Map level to difficulty for backward compatibility
+        const mappedTutorials = (tutorialsData || []).map((t: any) => ({
+          ...t,
+          difficulty: t.level || 'Beginner'
+        }))
+
+        setTutorials(mappedTutorials)
+        
+        // Find featured tutorial (first published and featured)
+        const featured = mappedTutorials.find((t: Tutorial) => t.is_featured)
+        setFeaturedTutorial(featured || null)
 
       } catch (err: any) {
         console.error('Error fetching tutorials:', err)
-        setError(err.message)
-        
-        // Set empty tutorials on error
+        setError(err.message || 'Failed to load tutorials')
         setTutorials([])
         setFeaturedTutorial(null)
       } finally {

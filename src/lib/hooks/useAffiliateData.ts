@@ -8,25 +8,21 @@ interface AffiliateStats {
   totalEarnings: number
   currentBalance: number
   totalSales: number
-  totalReferrals: number
+  totalDcsSales: number
   commissionRate: number
   pendingCommissions: number
 }
 
 interface Commission {
   id: string
-  amount: number
-  commission_rate: number
+  affiliate_id?: string
+  amount?: number
+  commission_amount?: number
+  commission_rate?: number
   status: string
   created_at: string
-  course: {
-    title: string
-  }
-  payment: {
-    amount: number
-    status: string
-    paid_at: string
-  }
+  commission_type?: string
+  [key: string]: any
 }
 
 interface Payout {
@@ -62,7 +58,7 @@ export const useAffiliateData = (): AffiliateDashboardData => {
     totalEarnings: 0,
     currentBalance: 0,
     totalSales: 0,
-    totalReferrals: 0,
+    totalDcsSales: 0,
     commissionRate: 100,
     pendingCommissions: 0
   })
@@ -79,23 +75,8 @@ export const useAffiliateData = (): AffiliateDashboardData => {
       return
     }
 
-    // If not an affiliate, use mock data immediately
-    if (profile.role !== 'affiliate') {
-      setStats({
-        totalEarnings: 2500.00,
-        currentBalance: 750.00,
-        totalSales: 15,
-        totalReferrals: 42,
-        commissionRate: 100,
-        pendingCommissions: 3
-      })
-      setRecentCommissions([])
-      setRecentPayouts([])
-      setAffiliateProfile({ commission_rate: 100, total_earnings: 2500, total_referrals: 42 } as AffiliateProfile)
-      setLoading(false)
-      return
-    }
-
+    // Always try to fetch real data - user might be admin with affiliate capabilities
+    // or have an affiliate profile regardless of their primary role
     try {
       setLoading(true)
       setError(null)
@@ -109,13 +90,12 @@ export const useAffiliateData = (): AffiliateDashboardData => {
           .eq('id', user.id)
           .single(),
         
-        // Fetch commissions (simplified query for speed)
+        // Fetch commissions with more details (fetch all for accurate counts)
         (supabase as any)
           .from('commissions')
           .select('*')
           .eq('affiliate_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(10),
+          .order('created_at', { ascending: false }),
         
         // Fetch payouts
         (supabase as any)
@@ -145,12 +125,25 @@ export const useAffiliateData = (): AffiliateDashboardData => {
       }
 
       // Handle commissions
-      let commissions = []
+      let commissions: any[] = []
       if (commissionsResult.status === 'fulfilled' && !commissionsResult.value.error) {
-        commissions = commissionsResult.value.data || []
-        setRecentCommissions(commissions)
+        const rawCommissions = commissionsResult.value.data || []
+
+        // Normalize field names so UI can rely on `amount`
+        commissions = rawCommissions.map((c: any) => ({
+          ...c,
+          amount: c.amount ?? c.commission_amount ?? 0
+        }))
+
+        console.log('📊 Fetched commissions:', commissions.length, 'records')
+        console.log('📊 Commission types:', commissions.map((c: any) => c.commission_type))
+
+        setRecentCommissions(commissions as Commission[])
       } else {
-        console.warn('Failed to fetch commissions, using empty array')
+        console.warn(
+          'Failed to fetch commissions:',
+          commissionsResult.status === 'rejected' ? commissionsResult.reason : commissionsResult.value?.error
+        )
         setRecentCommissions([])
       }
 
@@ -167,17 +160,39 @@ export const useAffiliateData = (): AffiliateDashboardData => {
       // Calculate stats with fallback values
       const totalEarnings = affiliateProfileData?.total_earnings || 0
       const currentBalance = affiliateProfileData?.available_balance || 0
-      const totalReferrals = affiliateProfileData?.lifetime_referrals || affiliateProfileData?.total_referrals || 0
       const commissionRate = affiliateProfileData?.commission_rate || 80
 
-      const totalSales = commissions.length || 0
+      // Calculate real-time sales counts from commissions
+      // Membership sales: learner_referral, affiliate_referral, learner_initial, or no type specified
+      const membershipCommissions = commissions.filter((c: any) => 
+        c.commission_type === 'learner_referral' || 
+        c.commission_type === 'affiliate_referral' || 
+        c.commission_type === 'learner_initial' ||
+        c.commission_type === 'learner' ||
+        !c.commission_type
+      )
+      const totalSales = membershipCommissions.length || 0
+      
+      // DCS sales: dcs_addon type
+      const dcsCommissions = commissions.filter((c: any) => 
+        c.commission_type === 'dcs_addon' || 
+        c.commission_type === 'dcs'
+      )
+      const totalDcsSales = dcsCommissions.length || 0
+      
+      console.log('📊 Sales calculation:', {
+        totalCommissions: commissions.length,
+        membershipSales: totalSales,
+        dcsSales: totalDcsSales,
+        commissionTypes: commissions.map((c: any) => c.commission_type)
+      })
       const pendingCommissions = commissions.filter((c: any) => c.status === 'pending').length || 0
 
       setStats({
         totalEarnings,
         currentBalance,
         totalSales,
-        totalReferrals,
+        totalDcsSales,
         commissionRate,
         pendingCommissions
       })
@@ -190,7 +205,7 @@ export const useAffiliateData = (): AffiliateDashboardData => {
         totalEarnings: 0,
         currentBalance: 0,
         totalSales: 0,
-        totalReferrals: 0,
+        totalDcsSales: 0,
         commissionRate: 100,
         pendingCommissions: 0
       })
@@ -225,6 +240,19 @@ export const useAffiliateData = (): AffiliateDashboardData => {
 
     document.addEventListener('visibilitychange', handleVisibilityChange)
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [fetchAffiliateData])
+
+  // Refetch when page is restored from bfcache (browser back/forward)
+  useEffect(() => {
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) {
+        console.log('🔄 Page restored from bfcache, refreshing affiliate data...')
+        fetchAffiliateData()
+      }
+    }
+
+    window.addEventListener('pageshow', handlePageShow)
+    return () => window.removeEventListener('pageshow', handlePageShow)
   }, [fetchAffiliateData])
 
   return {

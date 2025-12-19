@@ -550,6 +550,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe()
   }, [])
 
+  // Handle bfcache restoration - refresh auth state when page is restored from back/forward cache
+  useEffect(() => {
+    const handlePageShow = async (event: PageTransitionEvent) => {
+      if (event.persisted) {
+        console.log('🔄 Page restored from bfcache, refreshing auth state...')
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session) {
+          setSession(session)
+          setUser(session.user)
+          const profileData = await fetchProfile(session.user.id)
+          if (profileData) {
+            setProfile(profileData)
+          }
+        }
+      }
+    }
+
+    window.addEventListener('pageshow', handlePageShow)
+    return () => window.removeEventListener('pageshow', handlePageShow)
+  }, [])
+
   const value = {
     user,
     profile,
