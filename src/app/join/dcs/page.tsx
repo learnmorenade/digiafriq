@@ -1,32 +1,74 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { 
-  Check, 
-  DollarSign, 
-  TrendingUp, 
-  Users, 
-  ArrowRight,
   Sparkles,
-  Shield,
-  Clock,
-  Star,
-  Loader2,
-  Zap,
-  Target,
-  Wallet,
-  Gift,
-  BookOpen,
-  GraduationCap
+  Loader2
 } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase/client'
+import { motion, useScroll, useTransform, useInView, Variants, Variant } from 'framer-motion'
 
 const YOUTUBE_VIDEO_ID = 'ENmFgRFWgf8'
+
+// Animation variants
+const fadeInUp: Variants = {
+  hidden: { opacity: 0, y: 30 },
+  visible: { 
+    opacity: 1, 
+    y: 0,
+    transition: { duration: 0.6, ease: [0.25, 0.1, 0.25, 1] }
+  }
+}
+
+const fadeIn: Variants = {
+  hidden: { opacity: 0 },
+  visible: { 
+    opacity: 1,
+    transition: { duration: 0.6, ease: [0.25, 0.1, 0.25, 1] }
+  }
+}
+
+const scaleIn: Variants = {
+  hidden: { opacity: 0, scale: 0.9 },
+  visible: { 
+    opacity: 1, 
+    scale: 1,
+    transition: { duration: 0.5, ease: [0.25, 0.1, 0.25, 1] }
+  }
+}
+
+const slideInLeft: Variants = {
+  hidden: { opacity: 0, x: -50 },
+  visible: { 
+    opacity: 1, 
+    x: 0,
+    transition: { duration: 0.6, ease: [0.25, 0.1, 0.25, 1] }
+  }
+}
+
+const slideInRight: Variants = {
+  hidden: { opacity: 0, x: 50 },
+  visible: { 
+    opacity: 1, 
+    x: 0,
+    transition: { duration: 0.6, ease: [0.25, 0.1, 0.25, 1] }
+  }
+}
+
+const staggerContainer: Variants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.2
+    }
+  }
+}
 
 interface MembershipPackage {
   id: string
@@ -40,210 +82,118 @@ interface MembershipPackage {
   digital_cashflow_price?: number
 }
 
-interface DCSDarkPremiumLayoutProps {
-  membership: MembershipPackage | null
-  referrerName: string | null
-  countdownHours: number
-  countdownMinutes: number
-  countdownRemainingSeconds: number
-  handleGetStarted: () => void
-  totalPrice: number
-  currencySymbol: string
+// AnimatedSection component for scroll-triggered animations
+function AnimatedSection({ children, variants, className = "" }: { 
+  children: React.ReactNode; 
+  variants?: any; 
+  className?: string;
+}) {
+  const ref = useRef(null)
+  const isInView = useInView(ref, { once: true, margin: "-100px" })
+
+  return (
+    <motion.div
+      ref={ref}
+      initial="hidden"
+      animate={isInView ? "visible" : "hidden"}
+      variants={variants || fadeInUp}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  )
 }
 
-export default function DCSSalesPage() {
+function DCSSalesPageContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const referralCode = searchParams.get('ref')
-  
   const [membership, setMembership] = useState<MembershipPackage | null>(null)
   const [loading, setLoading] = useState(true)
   const [referrerName, setReferrerName] = useState<string | null>(null)
-  const [countdownSeconds, setCountdownSeconds] = useState(24 * 60 * 60)
+  
+  // Countdown state
+  const [countdownHours, setCountdownHours] = useState(1)
+  const [countdownMinutes, setCountdownMinutes] = useState(0)
+  const [countdownRemainingSeconds, setCountdownRemainingSeconds] = useState(0)
+  
+  // FAQ state
+  const [openItems, setOpenItems] = useState<{ [key: string]: boolean }>({})
 
-  // DCS addon price is fetched from database
+  // Toggle FAQ item function
+  const toggleItem = (id: string) => {
+    setOpenItems(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }))
+  }
 
+  // Fetch membership data
   useEffect(() => {
-    // Store referral code in localStorage for tracking
-    if (referralCode) {
-      localStorage.setItem('referral_code', referralCode)
-      localStorage.setItem('referral_type', 'affiliate')
-      
-      // Track affiliate link click
-      trackAffiliateClick(referralCode, 'dcs')
-    }
-    fetchReferrerInfo(referralCode)
-    fetchLearnerMembership()
-  }, [referralCode])
+    async function fetchMembership() {
+      try {
+        const { data, error } = await supabase
+          .from('membership_packages')
+          .select('*')
+          .eq('is_active', true)
+          .order('price', { ascending: true })
+          .limit(1)
 
+        if (error) {
+          console.error('Error fetching membership:', error)
+        } else {
+          setMembership(data?.[0] || null)
+        }
+      } catch (error) {
+        console.error('Error:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchMembership()
+  }, [])
+
+  // Fetch referrer name
+  useEffect(() => {
+    const referrer = searchParams.get('ref')
+    if (referrer) {
+      setReferrerName(referrer)
+    }
+  }, [searchParams])
+
+  // Countdown timer
   useEffect(() => {
     const timer = setInterval(() => {
-      setCountdownSeconds((prev) => (prev > 0 ? prev - 1 : 0))
+      const now = new Date()
+      const tomorrow = new Date(now)
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      tomorrow.setHours(0, 0, 0, 0)
+      
+      const diff = tomorrow.getTime() - now.getTime()
+      const hours = Math.floor(diff / (1000 * 60 * 60))
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000)
+      
+      setCountdownHours(hours)
+      setCountdownMinutes(minutes)
+      setCountdownRemainingSeconds(seconds)
     }, 1000)
 
     return () => clearInterval(timer)
   }, [])
 
-  const trackAffiliateClick = async (code: string, linkType: string) => {
-    try {
-      await fetch('/api/affiliate/track-click', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ referral_code: code, link_type: linkType })
-      })
-      console.log('📊 Affiliate click tracked')
-    } catch (error) {
-      console.error('Failed to track affiliate click:', error)
-    }
-  }
-
-  const fetchReferrerInfo = async (code: string | null) => {
-    if (!code) return
-    try {
-      // Get referrer info from affiliate_profiles
-      const { data: affiliateProfile } = await supabase
-        .from('affiliate_profiles')
-        .select('id')
-        .eq('referral_code', code)
-        .single()
-
-      if (affiliateProfile) {
-        // Get the referrer's name from profiles
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('full_name')
-          .eq('id', affiliateProfile.id)
-          .single()
-
-        if (profile?.full_name) {
-          setReferrerName(profile.full_name.split(' ')[0]) // First name only
-        }
-      }
-    } catch (error) {
-      console.log('Could not fetch referrer info')
-    }
-  }
-
-  const fetchLearnerMembership = async () => {
-    try {
-      // Fetch active learner membership package (DCS is an addon to learner membership)
-      const { data, error } = await supabase
-        .from('membership_packages')
-        .select('*')
-        .eq('member_type', 'learner')
-        .eq('is_active', true)
-        .order('price', { ascending: true })
-        .limit(1)
-        .single()
-
-      if (data) {
-        setMembership(data)
-      }
-    } catch (error) {
-      console.error('Error fetching membership:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
   const handleGetStarted = () => {
     if (membership) {
-      const checkoutUrl = `/checkout/guest/${membership.id}?type=dcs&addon=digital-cashflow${referralCode ? `&ref=${referralCode}` : ''}`
-      router.push(checkoutUrl)
+      // Navigate to guest checkout with membership ID as URL parameter
+      router.push(`/checkout/guest/${membership.id}`)
+    } else {
+      // Fallback to membership selection
+      router.push('/dashboard/learner/membership')
     }
   }
 
-  const getCurrencySymbol = (currency: string) => {
-    const symbols: Record<string, string> = {
-      USD: '$',
-      GHS: '₵',
-      NGN: '₦',
-    }
-    return symbols[currency] || currency
-  }
-
-  // Get DCS addon price from database
-  const dcsAddonPrice = membership?.digital_cashflow_price || 0
-  const totalPrice = membership ? membership.price + dcsAddonPrice : 0
-
-  const countdownHours = Math.floor(countdownSeconds / 3600)
-  const countdownMinutes = Math.floor((countdownSeconds % 3600) / 60)
-  const countdownRemainingSeconds = countdownSeconds % 60
-
-  const layoutVariant = searchParams.get('layout')
-  const useDarkPremiumLayout = layoutVariant === 'premium'
-
-  const currencySymbol = membership ? getCurrencySymbol(membership.currency) : ''
-
-  const earningBenefits = [
-    {
-      icon: DollarSign,
-      title: '80% Commission',
-      description: 'Earn 80% commission on every learner you refer to DigiAfriq'
-    },
-    {
-      icon: TrendingUp,
-      title: '20% Recurring',
-      description: 'Get 20% on all renewals from your referrals - passive income!'
-    },
-    {
-      icon: Gift,
-      title: '$2 Affiliate Bonus',
-      description: 'Earn an extra $2 for every affiliate you bring to the platform'
-    },
-    {
-      icon: Wallet,
-      title: 'Easy Withdrawals',
-      description: 'Withdraw your earnings directly to your bank or mobile money'
-    }
-  ]
-
-  const learningBenefits = [
-    {
-      icon: BookOpen,
-      title: 'All Premium Courses',
-      description: 'Full access to our entire course library on digital skills'
-    },
-    {
-      icon: GraduationCap,
-      title: 'Certificates',
-      description: 'Earn recognized certificates upon course completion'
-    },
-    {
-      icon: Users,
-      title: 'Community Access',
-      description: 'Join our exclusive community of learners and earners'
-    },
-    {
-      icon: Target,
-      title: 'Affiliate Dashboard',
-      description: 'Track your referrals, commissions, and earnings in real-time'
-    }
-  ]
-
-  const testimonials = [
-    {
-      name: 'Emmanuel K.',
-      role: 'Affiliate Partner',
-      content: 'I made my first $500 within the first month! The DCS system is a game-changer for anyone looking to earn online.',
-      rating: 5,
-      earnings: '$2,500+'
-    },
-    {
-      name: 'Fatima B.',
-      role: 'Top Earner',
-      content: 'The 80% commission is unreal. I share my link on social media and the money keeps coming in.',
-      rating: 5,
-      earnings: '$5,000+'
-    },
-    {
-      name: 'Samuel O.',
-      role: 'Affiliate Partner',
-      content: 'Best decision I ever made. Learning AND earning at the same time. The recurring commissions are amazing!',
-      rating: 5,
-      earnings: '$1,800+'
-    }
-  ]
+  const totalPrice = membership?.price || 18
+  const currencySymbol = membership?.currency === 'GHS' ? '₵' : '$'
 
   if (loading) {
     return (
@@ -253,620 +203,7 @@ export default function DCSSalesPage() {
     )
   }
 
-  if (useDarkPremiumLayout) {
-    return (
-      <DCSDarkPremiumLayout
-        membership={membership}
-        referrerName={referrerName}
-        countdownHours={countdownHours}
-        countdownMinutes={countdownMinutes}
-        countdownRemainingSeconds={countdownRemainingSeconds}
-        handleGetStarted={handleGetStarted}
-        totalPrice={totalPrice}
-        currencySymbol={currencySymbol}
-      />
-    )
-  }
-
-  return (
-    <div className="min-h-screen bg-black text-white">
-      {/* Header */}
-      {false && (
-        <header className="py-4 px-4 border-b border-yellow-500 bg-black/90 backdrop-blur-sm sticky top-0 z-50">
-          <div className="container max-w-6xl mx-auto flex items-center justify-between">
-            <Link href="/">
-              <Image
-                src="/digiafriqlogo.png"
-                alt="DigiAfriq"
-                width={120}
-                height={40}
-                className="h-10 w-auto"
-              />
-            </Link>
-            <Button 
-              onClick={handleGetStarted}
-              className="bg-red-600 hover:bg-red-700 text-white font-semibold rounded-full px-6"
-            >
-              Start Earning
-            </Button>
-          </div>
-        </header>
-      )}
-
-      {/* Hero Section */}
-      <section className="py-12 md:py-16 px-4 bg-black">
-        <div className="container max-w-4xl mx-auto text-center">
-          {referrerName && (
-            <div className="flex justify-center mb-4">
-              <div className="inline-flex items-center gap-2 bg-[#ed874a]/10 text-[#ed874a] px-4 py-2 rounded-full text-xs md:text-sm font-medium">
-                <Sparkles className="w-4 h-4" />
-                <span>{referrerName} invited you to start earning!</span>
-              </div>
-            </div>
-          )}
-
-          <h1 className="text-3xl md:text-5xl font-extrabold leading-tight mb-6">
-            STOP SCROLLING.
-          </h1>
-
-          <div className="mt-6">
-            <p className="text-[11px] md:text-xs tracking-[0.25em] uppercase text-[#ed874a] mb-2">
-              🎥 Watch This First (Do Not Skip)
-            </p>
-            <p className="text-sm md:text-base text-gray-200 max-w-3xl mx-auto mb-4">
-              This short video explains how the Digital Cashflow System works, who it’s for, and why this opportunity will not stay this cheap.
-            </p>
-
-            {/* YouTube video */}
-            <div className="w-full max-w-4xl mx-auto aspect-video bg-black border border-[#ed874a] rounded-xl overflow-hidden shadow-[0_0_40px_rgba(237,135,74,0.4)]">
-              <iframe
-                src={`https://www.youtube.com/embed/${YOUTUBE_VIDEO_ID}?controls=0&rel=0&modestbranding=1&disablekb=1`}
-                title="Digital Cashflow System Overview"
-                className="w-full h-full"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
-              />
-            </div>
-
-            {/* Smartphone & belief block under video */}
-            <div className="mt-6 max-w-3xl mx-auto rounded-3xl bg-white/5 border border-white/20 px-6 py-5 text-center shadow-[0_18px_45px_rgba(0,0,0,0.55)] backdrop-blur-md">
-              <p className="text-sm md:text-base text-red-400">
-                If you have a smartphone, internet access, and the desire to change your financial situation, this is for you.
-              </p>
-              <p className="mt-2 text-sm md:text-base text-gray-300 italic">
-                Most people won’t take this seriously.
-                <br />
-                That’s exactly why it works.
-              </p>
-            </div>
-
-            <p className="mt-4 text-xs md:text-sm text-gray-300 max-w-3xl mx-auto">
-              ⚠️ <span className="font-semibold">Warning:</span> If you finish this video, you won’t be able to say “I didn’t know.”
-            </p>
-          </div>
-
-          {/* Primary CTA under video */}
-          <div className="mt-8 flex flex-col items-center gap-3">
-            <Button 
-              onClick={handleGetStarted}
-              size="lg"
-              className="w-full max-w-xs sm:max-w-md bg-[#ed874a] hover:bg-orange-600 text-white text-lg px-10 py-6 rounded-full shadow-lg hover:shadow-xl transition-all"
-            >
-              🔥 GIVE ME ACCESS NOW 🔥
-              <ArrowRight className="w-5 h-5 ml-2" />
-            </Button>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-[11px] md:text-xs text-gray-300 opacity-80 text-center">
-              <p>✔ Instant access after payment</p>
-              <p>✔ Works worldwide</p>
-              <p>✔ Beginner-friendly — no experience needed</p>
-              <p>✔ Secure checkout</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Problem / Pain Section */}
-      <section className="py-16 px-4 bg-gradient-to-r from-[#ed874a] via-orange-500 to-[#ed874a]">
-        <div className="container max-w-4xl mx-auto text-white">
-          <div className="max-w-3xl mx-auto rounded-3xl bg-black/40 border border-white/15 px-6 md:px-8 py-8 md:py-10 shadow-[0_22px_55px_rgba(0,0,0,0.55)] backdrop-blur-sm text-left">
-            <h2 className="text-2xl md:text-3xl font-bold mb-4">
-              Right now, you are either:
-            </h2>
-
-            <div className="grid md:grid-cols-2 gap-8 mt-4 text-sm md:text-base">
-              <div>
-                <ul className="space-y-2">
-                  <li>• Tired of struggling financially</li>
-                  <li>• Frustrated by side hustles that don’t work</li>
-                  <li>• Overwhelmed by online business noise</li>
-                  <li>• Watching others win while you hesitate</li>
-                </ul>
-              </div>
-              <div>
-                <p className="font-semibold mb-3">People fail because they:</p>
-                <ul className="space-y-2">
-                  <li>• Don’t know what to sell</li>
-                  <li>• Don’t know how to sell</li>
-                  <li>• Don’t follow a proven structure</li>
-                </ul>
-              </div>
-            </div>
-
-            <div className="h-px w-full bg-orange-100/30 my-6" />
-
-            <p className="font-semibold mb-2 text-sm md:text-base">
-              The truth most people won’t tell you:
-            </p>
-
-            <p className="text-sm md:text-base text-orange-50/90 mb-2 max-w-2xl">
-              Trying random strategies online is expensive.
-            </p>
-
-            <p className="mt-2 text-sm md:text-base max-w-2xl font-semibold">
-              Guessing keeps people broke.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* DCS System Explanation & What You Get */}
-      <section className="py-16 px-4 bg-gradient-to-r from-white via-orange-50 to-white">
-        <div className="container max-w-4xl mx-auto text-gray-900 text-center">
-          <h2 className="text-2xl md:text-3xl font-bold mb-4">
-            The Digital Cashflow System Is Not Motivation. It Is a System.
-          </h2>
-
-          <p className="text-sm md:text-base text-gray-700 mb-4 max-w-3xl mx-auto">
-            The Digital Cashflow System (DCS) is a plug-and-play affiliate business framework designed for beginners who want clarity,
-            direction, and execution.
-          </p>
-
-          <p className="text-sm md:text-base text-gray-700 mb-4 max-w-3xl mx-auto">
-            You are shown exactly:
-          </p>
-
-          <div className="max-w-2xl mx-auto text-left">
-            <ul className="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700 mb-6">
-              <li>What profitable digital products to promote</li>
-              <li>How to promote them step by step</li>
-              <li>How to attract buyers without confusion</li>
-              <li>How to build consistency instead of luck</li>
-            </ul>
-          </div>
-
-          <p className="text-sm md:text-base text-gray-800 font-semibold mb-8 max-w-3xl mx-auto">
-            No product creation. No technical overwhelm. No endless trial and error. You follow instructions. Results follow action.
-          </p>
-
-          <div className="h-px w-full bg-orange-200 mb-8" />
-
-          {/* What You Get Inside DCS */}
-          <div className="space-y-4 mb-8 max-w-4xl mx-auto text-left">
-            <h3 className="text-xl font-semibold text-gray-900 text-center">
-              Here’s exactly what you get inside DCS
-            </h3>
-            <div className="grid md:grid-cols-2 gap-6 mt-2">
-              <div className="space-y-3">
-                <div>
-                  <p className="font-semibold text-sm md:text-base text-gray-900">
-                    📘 Foundation &amp; Digital Mindset
-                  </p>
-                  <p className="text-sm md:text-base text-gray-700">
-                    Understand how online income really works and why most beginners fail.
-                  </p>
-                </div>
-                <div>
-                  <p className="font-semibold text-sm md:text-base text-gray-900">
-                    📘 Affiliate Business Setup
-                  </p>
-                  <p className="text-sm md:text-base text-gray-700">
-                    Plug into high-profit digital products without creating anything.
-                  </p>
-                </div>
-                <div>
-                  <p className="font-semibold text-sm md:text-base text-gray-900">
-                    📘 Traffic &amp; Attention Systems
-                  </p>
-                  <p className="text-sm md:text-base text-gray-700">
-                    Learn practical ways to attract interested buyers online.
-                  </p>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <div>
-                  <p className="font-semibold text-sm md:text-base text-gray-900">
-                    📘 Sales &amp; Conversion Frameworks
-                  </p>
-                  <p className="text-sm md:text-base text-gray-700">
-                    Turn attention into commissions using proven principles.
-                  </p>
-                </div>
-                <div>
-                  <p className="font-semibold text-sm md:text-base text-gray-900">
-                    📘 Scaling &amp; Consistency
-                  </p>
-                  <p className="text-sm md:text-base text-gray-700">
-                    Build income momentum instead of one-time wins.
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm md:text-base text-gray-700">
-                    This is a complete digital business system, not scattered lessons.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Social Proof Screenshots */}
-      <section className="py-16 px-4 bg-[#050816]">
-        <div className="container max-w-6xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
-            {/* Card 1 */}
-            <div className="rounded-3xl bg-gradient-to-b from-[#1f2933] to-[#050816] p-6 flex flex-col shadow-xl border border-white/5">
-              <p className="text-sm md:text-base text-gray-100 font-semibold mb-4 leading-relaxed">
-                Real results from learners applying the DigiAfriq Digital Cashflow System.
-              </p>
-              <div className="mt-auto rounded-2xl overflow-hidden border border-white/10 bg-black/60">
-                <Image
-                  src="/Screenshot 2025-12-19 225126.png"
-                  alt="Student testimonial screenshot 1"
-                  width={600}
-                  height={400}
-                  className="w-full h-auto object-cover"
-                />
-              </div>
-            </div>
-
-            {/* Card 2 */}
-            <div className="rounded-3xl bg-gradient-to-b from-[#1f2933] to-[#050816] p-6 flex flex-col shadow-xl border border-white/5">
-              <p className="text-sm md:text-base text-gray-100 font-semibold mb-4 leading-relaxed">
-                Proof that consistent action with the system can translate into real online earnings.
-              </p>
-              <div className="mt-auto rounded-2xl overflow-hidden border border-white/10 bg-black/60">
-                <Image
-                  src="/Screenshot 2025-12-19 225135.png"
-                  alt="Student testimonial screenshot 2"
-                  width={600}
-                  height={400}
-                  className="w-full h-auto object-cover"
-                />
-              </div>
-            </div>
-
-            {/* Card 3 */}
-            <div className="rounded-3xl bg-gradient-to-b from-[#1f2933] to-[#050816] p-6 flex flex-col shadow-xl border border-white/5">
-              <p className="text-sm md:text-base text-gray-100 font-semibold mb-4 leading-relaxed">
-                More social proof from everyday people leveraging their phones for income.
-              </p>
-              <div className="mt-auto rounded-2xl overflow-hidden border border-white/10 bg-black/60">
-                <Image
-                  src="/Screenshot 2025-12-19 225147.png"
-                  alt="Student testimonial screenshot 3"
-                  width={600}
-                  height={400}
-                  className="w-full h-auto object-cover"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Value & Offer Breakdown */}
-          <div className="mt-16 border-t border-yellow-500/40 pt-10">
-            <p className="text-sm md:text-base font-semibold text-yellow-300 mb-2">
-              Total Value: GHS 2,650+ | NGN 371,000+
-            </p>
-            <p className="text-sm md:text-base text-gray-200 mb-6">
-              Here’s what you get inside Digiafriq:
-            </p>
-
-            <div className="space-y-5 text-sm md:text-base text-gray-100">
-              <div>
-                <p className="font-semibold">
-                  ✔ Digiafriq Core Training Program
-                  <span className="text-yellow-300 ml-1">(GHS 1,200 | NGN 168,000)</span>
-                </p>
-                <p className="text-gray-300 mt-1">
-                  A step-by-step system that teaches you how to promote digital products and earn online — even as a beginner.
-                </p>
-              </div>
-
-              <div>
-                <p className="font-semibold">
-                  ✔ Bonus Learning &amp; Resource Packs
-                  <span className="text-yellow-300 ml-1">(GHS 1,450+ | NGN 203,000+)</span>
-                </p>
-                <p className="text-gray-300 mt-1">
-                  Including practical guides, templates, and support materials to help you implement faster.
-                </p>
-              </div>
-            </div>
-
-            <div className="h-px w-full bg-yellow-500/40 my-8" />
-
-            <p className="text-sm md:text-base text-yellow-300 font-semibold mb-2">
-              🔥 Limited-Time Access Price
-            </p>
-            <p className="text-sm md:text-base text-gray-100 mb-1">
-              Get Full Access Today for Just
-            </p>
-            <p className="text-2xl md:text-3xl font-extrabold text-yellow-300 mb-6">
-              GHS 180 <span className="text-gray-300">|</span> NGN 25,200
-            </p>
-
-            <ul className="space-y-2 text-sm md:text-base text-gray-100 mb-8">
-              <li>✔ Full course access</li>
-              <li>✔ All bonus resources included</li>
-              <li>✔ One-time payment — no hidden fees</li>
-              <li>✔ Lifetime updates</li>
-              <li>✔ Access to the VIP support community</li>
-            </ul>
-
-            <p className="text-xs md:text-sm text-gray-400 mb-2">
-              ⏳ Why the Price Is Reduced
-            </p>
-            <p className="text-sm md:text-base text-gray-300 mb-8 max-w-2xl">
-              This is a limited-time onboarding offer for new Digiafriq members. Once the countdown ends, access returns to the original price.
-            </p>
-
-            <div className="flex flex-wrap items-center justify-center gap-6 mb-10 text-yellow-300">
-              <div className="text-center">
-                <div className="text-3xl md:text-4xl font-extrabold tracking-widest">00</div>
-                <div className="text-xs md:text-sm uppercase text-gray-400 mt-1">Days</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl md:text-4xl font-extrabold tracking-widest">
-                  {countdownHours.toString().padStart(2, '0')}
-                </div>
-                <div className="text-xs md:text-sm uppercase text-gray-400 mt-1">Hours</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl md:text-4xl font-extrabold tracking-widest">
-                  {countdownMinutes.toString().padStart(2, '0')}
-                </div>
-                <div className="text-xs md:text-sm uppercase text-gray-400 mt-1">Minutes</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl md:text-4xl font-extrabold tracking-widest">
-                  {countdownRemainingSeconds.toString().padStart(2, '0')}
-                </div>
-                <div className="text-xs md:text-sm uppercase text-gray-400 mt-1">Seconds</div>
-              </div>
-            </div>
-
-            <p className="text-sm md:text-base text-gray-300 mb-6 max-w-2xl mx-auto text-center">
-              Digiafriq is built as a learning and skill-based platform, not a get-rich-quick scheme. Your results depend on how well you apply what you learn.
-            </p>
-
-            <div className="flex justify-center">
-              <Button
-                onClick={handleGetStarted}
-                className="bg-red-600 hover:bg-red-700 text-white px-10 py-6 rounded-full text-sm md:text-base font-semibold tracking-wide shadow-lg hover:shadow-xl"
-              >
-                Checkout Now
-              </Button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Earning Benefits */}
-      <section className="py-16 px-4 bg-yellow-400">
-        <div className="container max-w-6xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-bold text-center text-black mb-4">
-            Your Earning Potential
-          </h2>
-          <p className="text-black/80 text-center max-w-2xl mx-auto mb-12 text-sm md:text-base">
-            Multiple ways to earn with the Digital Cashflow System
-          </p>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {earningBenefits.map((benefit, index) => (
-              <Card key={index} className="border-0 shadow-xl bg-black text-white">
-                <CardContent className="p-6 text-center">
-                  <div className="w-14 h-14 bg-yellow-400/10 border border-yellow-400 rounded-xl flex items-center justify-center mx-auto mb-4">
-                    <benefit.icon className="w-7 h-7 text-yellow-400" />
-                  </div>
-                  <h3 className="font-semibold text-lg mb-2">{benefit.title}</h3>
-                  <p className="text-gray-300 text-sm">{benefit.description}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Learning Benefits */}
-      <section className="py-16 px-4 bg-black">
-        <div className="container max-w-6xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-bold text-center text-white mb-4">
-            Plus Full Learning Access
-          </h2>
-          <p className="text-gray-300 text-center max-w-2xl mx-auto mb-12 text-sm md:text-base">
-            Everything from the Learner membership, plus affiliate features
-          </p>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {learningBenefits.map((benefit, index) => (
-              <Card key={index} className="border-0 shadow-lg hover:shadow-xl transition-shadow">
-                <CardContent className="p-6 text-center">
-                  <div className="w-14 h-14 bg-yellow-400/10 border border-yellow-400 rounded-xl flex items-center justify-center mx-auto mb-4">
-                    <benefit.icon className="w-7 h-7 text-yellow-400" />
-                  </div>
-                  <h3 className="font-semibold text-lg text-white mb-2">{benefit.title}</h3>
-                  <p className="text-gray-300 text-sm">{benefit.description}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Pricing Card */}
-      {membership && (
-        <section className="py-16 px-4 bg-[#111111]">
-          <div className="container max-w-4xl mx-auto">
-            <Card className="border border-yellow-500 shadow-2xl overflow-hidden bg-black text-white">
-              <div className="bg-yellow-400 p-6 text-black text-center">
-                <div className="inline-flex items-center gap-2 bg-black text-yellow-300 px-3 py-1 rounded-full text-sm font-medium mb-4">
-                  <Zap className="w-4 h-4" />
-                  <span>Best Value Offer</span>
-                </div>
-                <h3 className="text-2xl font-bold mb-2">Learner + Digital Cashflow System</h3>
-                <div className="flex items-center justify-center gap-2">
-                  <span className="text-4xl font-bold">{getCurrencySymbol(membership.currency)}{totalPrice}</span>
-                  <span className="text-black/70">/ {membership.duration_months} months</span>
-                </div>
-                <p className="text-black/80 mt-2 text-sm">
-                  {getCurrencySymbol(membership.currency)}{membership.price} membership + {getCurrencySymbol(membership.currency)}{dcsAddonPrice} DCS addon
-                </p>
-              </div>
-              <CardContent className="p-8">
-                <div className="grid md:grid-cols-2 gap-8">
-                  <div>
-                    <h4 className="font-semibold text-lg text-white mb-4 flex items-center gap-2">
-                      <BookOpen className="w-5 h-5 text-yellow-400" />
-                      Learning Features
-                    </h4>
-                    <ul className="space-y-3">
-                      {membership.features.slice(0, 4).map((feature, index) => (
-                        <li key={index} className="flex items-start gap-3">
-                          <Check className="w-5 h-5 text-yellow-400 mt-0.5 flex-shrink-0" />
-                          <span className="text-gray-200">{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-lg text-white mb-4 flex items-center gap-2">
-                      <DollarSign className="w-5 h-5 text-yellow-400" />
-                      Earning Features
-                    </h4>
-                    <ul className="space-y-3">
-                      <li className="flex items-start gap-3">
-                        <Check className="w-5 h-5 text-yellow-400 mt-0.5 flex-shrink-0" />
-                        <span className="text-gray-200">80% commission on referrals</span>
-                      </li>
-                      <li className="flex items-start gap-3">
-                        <Check className="w-5 h-5 text-yellow-400 mt-0.5 flex-shrink-0" />
-                        <span className="text-gray-200">Affiliate dashboard access</span>
-                      </li>
-                    </ul>
-                  </div>
-                </div>
-                <Button 
-                  onClick={handleGetStarted}
-                  className="w-full mt-8 bg-red-600 hover:bg-red-700 text-white py-6 text-lg font-semibold rounded-full"
-                >
-                  Start Learning & Earning Now
-                  <ArrowRight className="w-5 h-5 ml-2" />
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </section>
-      )}
-
-      {/* Testimonials */}
-      <section className="py-16 px-4 bg-black">
-        <div className="container max-w-6xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-bold text-center text-white mb-4">
-            Success Stories
-          </h2>
-          <p className="text-gray-300 text-center max-w-2xl mx-auto mb-12 text-sm md:text-base">
-            Real people earning real money with the Digital Cashflow System
-          </p>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {testimonials.map((testimonial, index) => (
-              <Card key={index} className="border-0 shadow-lg bg-[#181818] text-white">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex gap-1">
-                      {[...Array(testimonial.rating)].map((_, i) => (
-                        <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
-                      ))}
-                    </div>
-                    <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-semibold">
-                      {testimonial.earnings}
-                    </span>
-                  </div>
-                  <p className="text-gray-300 mb-4 italic">"{testimonial.content}"</p>
-                  <div>
-                    <p className="font-semibold text-white">{testimonial.name}</p>
-                    <p className="text-sm text-gray-400">{testimonial.role}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Final CTA */}
-      <section className="py-16 px-4 bg-yellow-400">
-        <div className="container max-w-4xl mx-auto text-center text-black">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            Ready to Start Earning?
-          </h2>
-          <p className="text-base md:text-xl text-black/80 mb-8 max-w-2xl mx-auto">
-            Join DigiAfriq with the Digital Cashflow System and start earning today
-          </p>
-          <Button 
-            onClick={handleGetStarted}
-            size="lg"
-            className="bg-black text-yellow-400 hover:bg-gray-900 text-lg px-8 py-6 rounded-full shadow-lg"
-          >
-            Get Started for {membership ? `${getCurrencySymbol(membership.currency)}${totalPrice}` : 'Loading...'}
-            <ArrowRight className="w-5 h-5 ml-2" />
-          </Button>
-          <div className="flex items-center justify-center gap-4 mt-6 text-black/70 text-sm">
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4" />
-              <span>Instant Access</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Shield className="w-4 h-4" />
-              <span>Secure Payment</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <DollarSign className="w-4 h-4" />
-              <span>Start Earning Today</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="py-8 px-4 bg-black border-t border-yellow-500 text-gray-400">
-        <div className="container max-w-6xl mx-auto text-center">
-          <Image
-            src="/digiafriqlogo.png"
-            alt="DigiAfriq"
-            width={100}
-            height={33}
-            className="mx-auto mb-4 brightness-0 invert"
-          />
-          <p className="text-sm">
-            © {new Date().getFullYear()} DigiAfriq. All rights reserved.
-          </p>
-        </div>
-      </footer>
-    </div>
-  )
-}
-
-function DCSDarkPremiumLayout(props: DCSDarkPremiumLayoutProps) {
-  const {
-    referrerName,
-    countdownHours,
-    countdownMinutes,
-    countdownRemainingSeconds,
-    handleGetStarted,
-  } = props
-
+  // Premium layout is now the main DCS sales page
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050816] to-black text-white">
       {/* Premium Hero */}
@@ -874,36 +211,50 @@ function DCSDarkPremiumLayout(props: DCSDarkPremiumLayoutProps) {
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(237,135,74,0.35),_transparent_55%)]" />
         <div className="relative max-w-4xl mx-auto px-4 py-16 md:py-20 flex flex-col items-center text-center">
           <div className="w-full flex flex-col items-center">
-            {referrerName && (
-              <div className="inline-flex items-center gap-2 rounded-full bg-white/5 border border-white/10 px-4 py-1.5 text-xs md:text-sm text-gray-200 mb-4">
-                <Sparkles className="w-4 h-4 text-[#ed874a]" />
-                <span className="truncate max-w-[220px] md:max-w-none">
-                  {referrerName} invited you to the Digital Cashflow System
-                </span>
-              </div>
-            )}
+            <AnimatedSection variants={fadeIn} className="w-full flex flex-col items-center">
+              
+              <motion.p 
+                variants={fadeInUp}
+                className="text-sm md:text-base font-semibold tracking-[0.2em] text-[#ed874a] mb-3 text-center"
+              >
+                STOP SCROLLING.
+              </motion.p>
 
-            <p className="text-sm md:text-base font-semibold tracking-[0.2em] text-[#ed874a] mb-3 text-center">
-              STOP SCROLLING.
-            </p>
+              <motion.h1 
+                variants={fadeInUp}
+                className="text-2xl md:text-4xl font-extrabold leading-tight mb-4 text-center max-w-2xl mx-auto"
+              >
+                This Is How Ordinary People Are Quietly Building Digital Income Online Without Creating Products
+              </motion.h1>
 
-            <h1 className="text-2xl md:text-4xl font-extrabold leading-tight mb-4 text-center max-w-2xl mx-auto">
-              This Is How Ordinary People Are Quietly Building Digital Income Online Without Creating Products
-            </h1>
+              <motion.p 
+                variants={fadeInUp}
+                className="text-[11px] md:text-xs tracking-[0.25em] uppercase text-[#ed874a] mb-2"
+              >
+                🎥 WATCH THIS FIRST (DO NOT SKIP)
+              </motion.p>
+              <motion.p 
+                variants={fadeInUp}
+                className="text-sm md:text-base text-gray-200 mb-4 max-w-2xl mx-auto"
+              >
+                In this short video, you'll see how the Digital Cashflow System works and why more people are quietly getting in early.
+              </motion.p>
 
-            <p className="text-[11px] md:text-xs tracking-[0.25em] uppercase text-[#ed874a] mb-2">
-              🎥 WATCH THIS FIRST (DO NOT SKIP)
-            </p>
-            <p className="text-sm md:text-base text-gray-200 mb-4 max-w-2xl mx-auto">
-              This short video explains how the Digital Cashflow System works, who it’s for, and why this opportunity will not stay this cheap.
-            </p>
+              <motion.p 
+                variants={fadeInUp}
+                className="mt-4 text-xs md:text-sm text-gray-300 max-w-2xl mx-auto mb-6"
+              >
+                ⚠️ Warning: If you finish this video, you won't be able to say "I didn't know."
+              </motion.p>
+            </AnimatedSection>
 
-            <p className="mt-4 text-xs md:text-sm text-gray-300 max-w-2xl mx-auto mb-6">
-              ⚠️ Warning: If you finish this video, you won’t be able to say “I didn’t know.”
-            </p>
             {/* Video directly under hero copy */}
-            <div className="relative w-full mt-6 max-w-3xl mx-auto">
-              <div className="rounded-3xl border border-white/10 bg-black/70 shadow-[0_0_50px_rgba(0,0,0,0.85)] overflow-hidden">
+            <AnimatedSection variants={scaleIn} className="relative w-full mt-6 max-w-3xl mx-auto">
+              <motion.div 
+                whileHover={{ scale: 1.02 }}
+                transition={{ duration: 0.3 }}
+                className="rounded-3xl border border-white/10 bg-black/70 shadow-[0_0_50px_rgba(0,0,0,0.85)] overflow-hidden"
+              >
                 <div className="aspect-video w-full bg-black">
                   <iframe
                     src={`https://www.youtube.com/embed/${YOUTUBE_VIDEO_ID}?controls=0&rel=0&modestbranding=1&disablekb=1`}
@@ -913,20 +264,26 @@ function DCSDarkPremiumLayout(props: DCSDarkPremiumLayoutProps) {
                     allowFullScreen
                   />
                 </div>
-              </div>
-            </div>
+              </motion.div>
+            </AnimatedSection>
 
             {/* Smartphone & belief block under video */}
-            <div className="mt-6 max-w-3xl mx-auto rounded-3xl bg-white/5 border border-white/20 px-6 py-5 text-center shadow-[0_18px_45px_rgba(0,0,0,0.65)] backdrop-blur-md">
-              <p className="text-sm md:text-base text-red-400">
-                If you have a smartphone, internet access, and the desire to change your financial situation, this is for you.
-              </p>
-              <p className="mt-2 text-sm md:text-base text-gray-300 italic">
-                Most people won’t take this seriously.
-                <br />
-                That’s exactly why it works.
-              </p>
-            </div>
+            <AnimatedSection variants={fadeInUp} className="mt-6 max-w-3xl mx-auto">
+              <motion.div 
+                whileHover={{ scale: 1.02, y: -2 }}
+                transition={{ duration: 0.3 }}
+                className="rounded-3xl bg-white/5 border border-white/20 px-6 py-5 text-center shadow-[0_18px_45px_rgba(0,0,0,0.65)] backdrop-blur-md"
+              >
+                <p className="text-sm md:text-base text-red-400">
+                  If you have a smartphone, internet access, and the desire to change your financial situation, this is for you.
+                </p>
+                <p className="mt-2 text-sm md:text-base text-gray-300 italic">
+                  Most people won't take this seriously.
+                  <br />
+                  That's exactly why it works.
+                </p>
+              </motion.div>
+            </AnimatedSection>
           </div>
         </div>
       </section>
@@ -934,21 +291,44 @@ function DCSDarkPremiumLayout(props: DCSDarkPremiumLayoutProps) {
       {/* Problem / Pain Strip - Premium */}
       <section className="py-8 md:py-12 border-b border-white/10 bg-black/80">
         <div className="max-w-4xl mx-auto px-4 text-white">
-          <div className="max-w-3xl mx-auto rounded-3xl bg-white/5 border border-white/15 px-6 md:px-8 py-8 md:py-10 shadow-[0_22px_55px_rgba(0,0,0,0.55)] backdrop-blur-sm text-left">
-            <h2 className="text-xl md:text-2xl font-semibold mb-4">
+          <AnimatedSection variants={slideInLeft} className="max-w-3xl mx-auto rounded-3xl bg-white/5 border border-white/15 px-6 md:px-8 py-8 md:py-10 shadow-[0_22px_55px_rgba(0,0,0,0.55)] backdrop-blur-sm text-left">
+            <motion.h2 
+              variants={fadeInUp}
+              className="text-xl md:text-2xl font-semibold mb-4"
+            >
               Right now, you are either:
-            </h2>
+            </motion.h2>
 
-            <ul className="space-y-2 text-sm md:text-base text-gray-200 mb-6">
-              <li>• Tired of struggling financially</li>
-              <li>• Frustrated by side hustles that don’t work</li>
-              <li>• Overwhelmed by online business noise</li>
-              <li>• Watching others win while you hesitate</li>
-            </ul>
+            <motion.ul 
+              variants={staggerContainer}
+              className="space-y-2 text-sm md:text-base text-gray-200 mb-6"
+            >
+              {[
+                "Tired of struggling financially",
+                "Frustrated by side hustles that don't work", 
+                "Overwhelmed by online business noise",
+                "Watching others win while you hesitate"
+              ].map((item, index) => (
+                <motion.li 
+                  key={index}
+                  variants={fadeInUp}
+                  whileHover={{ x: 10 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  • {item}
+                </motion.li>
+              ))}
+            </motion.ul>
 
-            <div className="h-px w-full bg-white/15 my-4" />
+            <motion.div 
+              variants={fadeIn}
+              className="h-px w-full bg-white/15 my-4"
+            />
 
-            <p className="mt-2 text-sm md:text-base text-gray-100 font-semibold">
+            <motion.p 
+              variants={fadeInUp}
+              className="mt-2 text-sm md:text-base text-gray-100 font-semibold"
+            >
               Most people fail online because they never follow a real system.
               <br />
               They guess.
@@ -956,701 +336,862 @@ function DCSDarkPremiumLayout(props: DCSDarkPremiumLayoutProps) {
               They jump.
               <br />
               They quit.
-            </p>
+            </motion.p>
 
-            <p className="text-sm md:text-base text-gray-200 font-semibold mb-2 mt-6">
-              The truth most people won’t tell you:
-            </p>
-            <p className="text-sm md:text-base text-gray-300 mb-2">
+            <motion.p 
+              variants={fadeInUp}
+              className="text-sm md:text-base text-gray-200 font-semibold mb-2 mt-6"
+            >
+              The truth most people won't tell you:
+            </motion.p>
+            <motion.p 
+              variants={fadeInUp}
+              className="text-sm md:text-base text-gray-300 mb-2"
+            >
               Trying random strategies online is expensive.
-            </p>
-            <p className="text-sm md:text-base text-gray-300">
+            </motion.p>
+            <motion.p 
+              variants={fadeInUp}
+              className="text-sm md:text-base text-gray-300"
+            >
               Guessing keeps people broke.
-            </p>
-          </div>
+            </motion.p>
+          </AnimatedSection>
         </div>
       </section>
 
       {/* Modules & Outcomes */}
       <section className="py-14 md:py-16 bg-gradient-to-r from-[#ed874a] via-orange-500 to-[#ed874a] border-y border-white/10">
         <div className="max-w-4xl mx-auto px-4 text-white">
-          <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-2xl md:text-3xl font-semibold mb-6">
+          <AnimatedSection variants={fadeIn} className="max-w-3xl mx-auto text-center">
+            <motion.h2 
+              variants={fadeInUp}
+              className="text-2xl md:text-3xl font-semibold mb-6"
+            >
               The Digital Cashflow System Is Not Motivation.
               <br className="hidden md:block" /> It Is a System.
-            </h2>
+            </motion.h2>
 
-            <p className="text-sm md:text-base text-orange-50/95 mb-6 max-w-2xl mx-auto leading-relaxed">
+            <motion.p 
+              variants={fadeInUp}
+              className="text-sm md:text-base text-orange-50/95 mb-6 max-w-2xl mx-auto leading-relaxed"
+            >
               The Digital Cashflow System (DCS) is a plug-and-play affiliate business framework designed for beginners who want clarity, direction, and execution.
-            </p>
+            </motion.p>
 
-            <p className="text-sm md:text-base text-orange-50/95 mb-4 max-w-2xl mx-auto font-medium">
+            <motion.p 
+              variants={fadeInUp}
+              className="text-sm md:text-base text-orange-50/95 mb-4 max-w-2xl mx-auto font-medium"
+            >
               You are shown:
-            </p>
+            </motion.p>
 
-            <div className="max-w-2xl mx-auto text-left text-sm md:text-base text-orange-50/90 space-y-2 mb-8">
-              <p>• What profitable digital products to promote</p>
-              <p>• How to promote them step by step</p>
-              <p>• How to attract buyers without confusion</p>
-              <p>• How to build consistency instead of luck</p>
-            </div>
+            <motion.div 
+              variants={staggerContainer}
+              className="max-w-2xl mx-auto text-left text-sm md:text-base text-orange-50/90 space-y-2 mb-8"
+            >
+              {[
+                "What profitable digital products to promote",
+                "How to promote them step by step",
+                "How to attract buyers without confusion",
+                "How to build consistency instead of luck"
+              ].map((item, index) => (
+                <motion.p 
+                  key={index}
+                  variants={fadeInUp}
+                  whileHover={{ x: 5 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  • {item}
+                </motion.p>
+              ))}
+            </motion.div>
 
-            <div className="bg-white/10 rounded-3xl px-6 py-6 mb-8 backdrop-blur-sm border border-white/20">
-              <p className="text-sm md:text-base text-orange-50 leading-relaxed mb-4">
+            <motion.div 
+              variants={scaleIn}
+              whileHover={{ scale: 1.05 }}
+              transition={{ duration: 0.3 }}
+              className="bg-white/10 rounded-3xl px-6 py-6 mb-8 backdrop-blur-sm border border-white/20"
+            >
+              <motion.p 
+                variants={fadeInUp}
+                className="text-sm md:text-base text-orange-50 leading-relaxed mb-4"
+              >
                 No product creation.
                 <br />
                 No technical overwhelm.
                 <br />
                 No endless trial and error.
-              </p>
+              </motion.p>
 
-              <p className="text-sm md:text-base text-white font-semibold leading-relaxed">
+              <motion.p 
+                variants={fadeInUp}
+                className="text-sm md:text-base text-white font-semibold leading-relaxed"
+              >
                 You follow instructions.
                 <br />
                 Results follow action.
-              </p>
-            </div>
-          </div>
+              </motion.p>
+            </motion.div>
+          </AnimatedSection>
         </div>
       </section>
 
       {/* Compact social proof */}
       <section className="py-14 md:py-16 bg-black border-b border-white/10">
         <div className="max-w-5xl mx-auto px-4">
-
-          <div className="grid gap-5 md:grid-cols-3">
-            <div className="rounded-2xl bg-gradient-to-b from-[#1f2933] to-black p-4 border border-white/10 flex flex-col gap-3">
-              <div className="rounded-xl overflow-hidden border border-white/10 bg-black/60">
-                <Image
-                  src="/Screenshot 2025-12-19 225126.png"
-                  alt="Student testimonial screenshot 1"
-                  width={500}
-                  height={320}
-                  className="w-full h-auto object-cover"
-                />
-              </div>
-            </div>
-
-            <div className="rounded-2xl bg-gradient-to-b from-[#1f2933] to-black p-4 border border-white/10 flex flex-col gap-3">
-              <div className="rounded-xl overflow-hidden border border-white/10 bg-black/60">
-                <Image
-                  src="/Screenshot 2025-12-19 225135.png"
-                  alt="Student testimonial screenshot 2"
-                  width={500}
-                  height={320}
-                  className="w-full h-auto object-cover"
-                />
-              </div>
-            </div>
-
-            <div className="rounded-2xl bg-gradient-to-b from-[#1f2933] to-black p-4 border border-white/10 flex flex-col gap-3">
-              <div className="rounded-xl overflow-hidden border border-white/10 bg-black/60">
-                <Image
-                  src="/Screenshot 2025-12-19 225147.png"
-                  alt="Student testimonial screenshot 3"
-                  width={500}
-                  height={320}
-                  className="w-full h-auto object-cover"
-                />
-              </div>
-            </div>
-          </div>
+          <motion.div 
+            variants={staggerContainer}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+            className="grid gap-5 md:grid-cols-3"
+          >
+            {[
+              "/Screenshot 2025-12-19 225126.png",
+              "/Screenshot 2025-12-19 225135.png", 
+              "/Screenshot 2025-12-19 225147.png"
+            ].map((src, index) => (
+              <motion.div
+                key={index}
+                variants={scaleIn}
+                whileHover={{ 
+                  scale: 1.05, 
+                  y: -5,
+                  boxShadow: "0 20px 40px rgba(237,135,74,0.3)"
+                }}
+                transition={{ duration: 0.3 }}
+                className="rounded-2xl bg-gradient-to-b from-[#1f2933] to-black p-4 border border-white/10 flex flex-col gap-3"
+              >
+                <div className="rounded-xl overflow-hidden border border-white/10 bg-black/60">
+                  <Image
+                    src={src}
+                    alt={`Student testimonial screenshot ${index + 1}`}
+                    width={500}
+                    height={320}
+                    className="w-full h-auto object-cover"
+                  />
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
         </div>
       </section>
 
       {/* Premium pricing strip */}
       <section className="py-14 md:py-16 bg-gradient-to-r from-[#111827] via-black to-[#111827] border-t border-white/10">
         <div className="max-w-4xl mx-auto px-4 space-y-10">
-          <div className="text-center">
-            <h2 className="text-xl md:text-2xl font-semibold mb-4">
-              🔥 YES! GIVE ME ACCESS TO DCS NOW 🔥
-            </h2>
-            <p className="text-sm md:text-base text-gray-200 mb-3">
-              ⏳ LIMITED-TIME OFFER ENDS IN:
-            </p>
-            <div className="flex items-center justify-center gap-4 text-gray-100 font-mono text-xl md:text-2xl mb-4">
-              <span>00</span>
-              <span>:</span>
-              <span>{countdownHours.toString().padStart(2, '0')}</span>
-              <span>:</span>
-              <span>{countdownMinutes.toString().padStart(2, '0')}</span>
-              <span>:</span>
-              <span>{countdownRemainingSeconds.toString().padStart(2, '0')}</span>
-            </div>
-
-            <Button
-              onClick={handleGetStarted}
-              size="lg"
-              className="bg-[#ed874a] hover:bg-orange-600 text-white px-10 py-6 rounded-full text-base md:text-lg font-semibold shadow-[0_18px_45px_rgba(237,135,74,0.55)] inline-flex items-center justify-center gap-2 mb-4"
+          <AnimatedSection variants={fadeIn} className="text-center">
+            <motion.h2 
+              variants={fadeInUp}
+              animate={{ 
+                textShadow: ["0 0 20px rgba(237,135,74,0.5)", "0 0 30px rgba(237,135,74,0.8)", "0 0 20px rgba(237,135,74,0.5)"]
+              }}
+              transition={{ duration: 2, repeat: Infinity }}
+              className="text-xl md:text-2xl font-semibold mb-4"
             >
-              🔥 GIVE ME ACCESS NOW 🔥
-            </Button>
+              🔥 YES! GIVE ME ACCESS TO DCS NOW 🔥
+            </motion.h2>
+            <motion.p 
+              variants={fadeInUp}
+              className="text-sm md:text-base text-gray-200 mb-3"
+            >
+              ⏳ LIMITED-TIME OFFER ENDS IN:
+            </motion.p>
+            <motion.div 
+              variants={scaleIn}
+              animate={{ scale: [1, 1.05, 1] }}
+              transition={{ duration: 1, repeat: Infinity }}
+              className="flex items-center justify-center gap-2 text-3xl md:text-4xl font-bold text-[#ed874a] tabular-nums"
+            >
+              <motion.span
+                animate={{ 
+                  color: ["#ed874a", "#ff6b35", "#ed874a"],
+                  textShadow: ["0 0 10px rgba(237,135,74,0.8)", "0 0 20px rgba(255,107,53,1)", "0 0 10px rgba(237,135,74,0.8)"]
+                }}
+                transition={{ duration: 1, repeat: Infinity }}
+              >
+                {countdownHours.toString().padStart(2, '0')}
+              </motion.span>
+              <span>:</span>
+              <motion.span
+                animate={{ 
+                  color: ["#ed874a", "#ff6b35", "#ed874a"],
+                  textShadow: ["0 0 10px rgba(237,135,74,0.8)", "0 0 20px rgba(255,107,53,1)", "0 0 10px rgba(237,135,74,0.8)"]
+                }}
+                transition={{ duration: 1, repeat: Infinity, delay: 0.2 }}
+              >
+                {countdownMinutes.toString().padStart(2, '0')}
+              </motion.span>
+              <span>:</span>
+              <motion.span
+                animate={{ 
+                  color: ["#ed874a", "#ff6b35", "#ed874a"],
+                  textShadow: ["0 0 10px rgba(237,135,74,0.8)", "0 0 20px rgba(255,107,53,1)", "0 0 10px rgba(237,135,74,0.8)"]
+                }}
+                transition={{ duration: 1, repeat: Infinity, delay: 0.4 }}
+              >
+                {countdownRemainingSeconds.toString().padStart(2, '0')}
+              </motion.span>
+            </motion.div>
 
-            <div className="grid gap-2 text-xs md:text-sm text-gray-200 max-w-md mx-auto">
-              <p>✔ Instant access after payment</p>
-              <p>✔ Works worldwide</p>
-              <p>✔ Beginner-friendly — no experience needed</p>
-              <p>✔ Secure checkout</p>
-            </div>
-          </div>
+            <motion.div
+              variants={fadeInUp}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+            >
+              <Button
+                onClick={handleGetStarted}
+                size="lg"
+                className="bg-[#ed874a] hover:bg-orange-600 text-white px-10 py-6 rounded-full text-base md:text-lg font-semibold shadow-[0_18px_45px_rgba(237,135,74,0.55)] inline-flex items-center justify-center gap-2 mb-4"
+              >
+                🔥 GIVE ME ACCESS NOW 🔥
+              </Button>
+            </motion.div>
 
+            <motion.div 
+              variants={staggerContainer}
+              className="grid gap-2 text-xs md:text-sm text-gray-200 max-w-md mx-auto"
+            >
+              {[
+                "Instant access after payment",
+                "Works worldwide",
+                "Beginner-friendly — no experience needed",
+                "Secure checkout"
+              ].map((item, index) => (
+                <motion.p 
+                  key={index}
+                  variants={fadeInUp}
+                  whileHover={{ x: 5 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  ✔ {item}
+                </motion.p>
+              ))}
+            </motion.div>
+          </AnimatedSection>
+        </div>
+      </section>
+
+      {/* Why Waiting Section */}
+      <section className="py-14 md:py-16 bg-black">
+        <div className="max-w-4xl mx-auto px-4">
           <div className="max-w-3xl mx-auto rounded-3xl bg-white/5 border border-white/15 px-6 md:px-8 py-8 md:py-10 shadow-[0_22px_55px_rgba(0,0,0,0.55)] backdrop-blur-sm text-left text-white">
             <h3 className="text-xl md:text-2xl font-bold mb-6 text-center">
               Why Waiting Is the Most Expensive Decision You Can Make
             </h3>
             
-            <div className="space-y-4 text-sm md:text-base">
-              <p className="text-center font-semibold text-orange-200">
-                Right now, access is $18.
-                <br />
-                When the timer ends, it goes back to $145 — automatically.
-              </p>
-              
-              <p className="text-center text-orange-100">
-                This price is not permanent.
-                <br />
-                This page will not stay like this.
-              </p>
-              
-              <div className="border-t border-white/10 pt-4">
-                <p className="font-semibold mb-3 text-orange-200">Every day you delay:</p>
-                <ul className="space-y-2 text-gray-100">
-                  <li>• You stay stuck in the same income position</li>
-                  <li>• You miss learning a valuable digital skill</li>
-                  <li>• You let fear decide for you</li>
-                </ul>
-              </div>
-              
-              <div className="border-t border-white/10 pt-4">
-                <p className="text-gray-100 leading-relaxed">
-                  People who win online don't wait for "perfect timing."
-                  <br />
-                  <span className="font-semibold text-orange-200">They move when opportunity shows up.</span>
-                </p>
-              </div>
+            <div className="space-y-4 text-sm md:text-base text-gray-200 mb-6">
+              <p>• Every day you wait, someone else joins and starts earning</p>
+              <p>• The price increases when the timer hits zero</p>
+              <p>• Your current financial situation won't change without action</p>
+              <p>• This system works, but only if you work it</p>
+            </div>
+
+            <div className="h-px w-full bg-white/15 my-6" />
+
+            <p className="text-sm md:text-base text-gray-100 font-semibold mb-4">
+              The cost of waiting:
+            </p>
+            <div className="grid gap-2 text-sm md:text-base text-gray-200">
+              <p>• Lost time you could have been building skills</p>
+              <p>• Higher price when you finally decide to join</p>
+              <p>• Continued financial stress and uncertainty</p>
+              <p>• Watching others succeed while you hesitate</p>
             </div>
           </div>
+        </div>
+      </section>
 
-          <div className="text-center space-y-3">
-            <Button
-              onClick={handleGetStarted}
-              size="lg"
-              className="bg-[#ed874a] hover:bg-orange-600 text-white px-10 py-6 rounded-full text-base md:text-lg font-semibold shadow-[0_18px_45px_rgba(237,135,74,0.55)] inline-flex items-center justify-center gap-2"
+      {/* Modules Display */}
+      <section className="py-14 md:py-16 bg-black">
+        <div className="max-w-4xl mx-auto px-4">
+          <AnimatedSection variants={fadeIn} className="max-w-4xl mx-auto">
+            <motion.h3 
+              variants={fadeInUp}
+              className="text-2xl md:text-3xl font-bold text-center mb-8 text-white"
             >
-              🚀 GET STARTED FOR $18 NOW
-            </Button>
-            <div className="grid gap-1 text-xs md:text-sm text-gray-200 max-w-md mx-auto">
-              <p>✔ One-time payment</p>
-              <p>✔ No hidden fees</p>
-              <p>✔ Lifetime access to current content</p>
-              <p>✔ Step-by-step guidance included</p>
-            </div>
-          </div>
-
-          <div className="max-w-4xl mx-auto">
-            <h3 className="text-2xl md:text-3xl font-bold text-center mb-8 text-white">
               Here's Exactly What You Get Inside DCS
-            </h3>
+            </motion.h3>
             
-            <div className="grid gap-4 md:gap-6">
-              {/* Module 1 */}
-              <div className="rounded-2xl bg-gradient-to-r from-[#1f2933] to-black p-6 border border-white/10 hover:border-orange-400/30 transition-all">
-                <div className="flex items-start gap-4">
-                  <div className="text-3xl">�</div>
-                  <div className="flex-1">
-                    <h4 className="text-lg md:text-xl font-semibold text-white mb-2">
-                      Foundation & Digital Mindset
-                    </h4>
-                    <p className="text-gray-300 text-sm md:text-base leading-relaxed">
-                      Understand how online income really works and why most beginners fail.
-                    </p>
+            <motion.div 
+              variants={staggerContainer}
+              className="grid gap-4 md:gap-6"
+            >
+              {[
+                {
+                  icon: "📚",
+                  title: "Foundation & Digital Mindset",
+                  description: "Understand how online income really works and why most beginners fail."
+                },
+                {
+                  icon: "📚",
+                  title: "Affiliate Business Setup",
+                  description: "Plug into high-profit digital products without creating anything."
+                },
+                {
+                  icon: "📚",
+                  title: "Traffic & Attention Systems",
+                  description: "Learn practical ways to attract interested buyers online."
+                },
+                {
+                  icon: "📚",
+                  title: "Sales & Conversion Frameworks",
+                  description: "Turn attention into commissions using proven principles."
+                },
+                {
+                  icon: "📚",
+                  title: "Scaling & Consistency",
+                  description: "Build income momentum instead of one-time wins."
+                }
+              ].map((module, index) => (
+                <motion.div
+                  key={index}
+                  variants={slideInLeft}
+                  whileHover={{ 
+                    x: 10,
+                    borderColor: "rgba(251, 146, 60, 0.5)",
+                    boxShadow: "0 10px 30px rgba(251, 146, 60, 0.2)"
+                  }}
+                  transition={{ duration: 0.3 }}
+                  className="rounded-2xl bg-gradient-to-r from-[#1f2933] to-black p-6 border border-white/10"
+                >
+                  <div className="flex items-start gap-4">
+                    <motion.div 
+                      whileHover={{ scale: 1.2, rotate: 10 }}
+                      transition={{ duration: 0.2 }}
+                      className="text-3xl"
+                    >
+                      {module.icon}
+                    </motion.div>
+                    <div className="flex-1">
+                      <h4 className="text-lg md:text-xl font-semibold text-white mb-2">
+                        {module.title}
+                      </h4>
+                      <p className="text-gray-300 text-sm md:text-base leading-relaxed">
+                        {module.description}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              </div>
+                </motion.div>
+              ))}
+            </motion.div>
 
-              {/* Module 2 */}
-              <div className="rounded-2xl bg-gradient-to-r from-[#1f2933] to-black p-6 border border-white/10 hover:border-orange-400/30 transition-all">
-                <div className="flex items-start gap-4">
-                  <div className="text-3xl">�</div>
-                  <div className="flex-1">
-                    <h4 className="text-lg md:text-xl font-semibold text-white mb-2">
-                      Affiliate Business Setup
-                    </h4>
-                    <p className="text-gray-300 text-sm md:text-base leading-relaxed">
-                      Plug into high-profit digital products without creating anything.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Module 3 */}
-              <div className="rounded-2xl bg-gradient-to-r from-[#1f2933] to-black p-6 border border-white/10 hover:border-orange-400/30 transition-all">
-                <div className="flex items-start gap-4">
-                  <div className="text-3xl">�</div>
-                  <div className="flex-1">
-                    <h4 className="text-lg md:text-xl font-semibold text-white mb-2">
-                      Traffic & Attention Systems
-                    </h4>
-                    <p className="text-gray-300 text-sm md:text-base leading-relaxed">
-                      Learn practical ways to attract interested buyers online.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Module 4 */}
-              <div className="rounded-2xl bg-gradient-to-r from-[#1f2933] to-black p-6 border border-white/10 hover:border-orange-400/30 transition-all">
-                <div className="flex items-start gap-4">
-                  <div className="text-3xl">�</div>
-                  <div className="flex-1">
-                    <h4 className="text-lg md:text-xl font-semibold text-white mb-2">
-                      Sales & Conversion Frameworks
-                    </h4>
-                    <p className="text-gray-300 text-sm md:text-base leading-relaxed">
-                      Turn attention into commissions using proven principles.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Module 5 */}
-              <div className="rounded-2xl bg-gradient-to-r from-[#1f2933] to-black p-6 border border-white/10 hover:border-orange-400/30 transition-all">
-                <div className="flex items-start gap-4">
-                  <div className="text-3xl">�</div>
-                  <div className="flex-1">
-                    <h4 className="text-lg md:text-xl font-semibold text-white mb-2">
-                      Scaling & Consistency
-                    </h4>
-                    <p className="text-gray-300 text-sm md:text-base leading-relaxed">
-                      Build income momentum instead of one-time wins.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Closing statement */}
-            <div className="mt-8 text-center">
+            <motion.div 
+              variants={scaleIn}
+              whileHover={{ scale: 1.05 }}
+              transition={{ duration: 0.3 }}
+              className="mt-8 text-center"
+            >
               <div className="inline-block rounded-full bg-orange-500/10 border border-orange-400/30 px-6 py-3">
                 <p className="text-orange-200 font-semibold text-lg">
                   This is a complete digital business system, not scattered lessons.
                 </p>
               </div>
-            </div>
-          </div>
+            </motion.div>
+          </AnimatedSection>
+        </div>
+      </section>
 
-          <div className="mt-12">
-            <div className="grid gap-5 md:grid-cols-3">
-              <div className="rounded-2xl bg-gradient-to-b from-[#1f2933] to-black p-4 border border-white/10 flex flex-col gap-3">
+      {/* Testimonials */}
+      <AnimatedSection variants={fadeIn} className="max-w-4xl mx-auto mt-12">
+        <motion.h3 
+          variants={fadeInUp}
+          className="text-2xl md:text-3xl font-bold text-center mb-8 text-white"
+        >
+          What Our Members Are Saying
+        </motion.h3>
+        
+        <motion.div 
+          variants={staggerContainer}
+          className="grid gap-6 md:grid-cols-2"
+        >
+          {[
+            {
+              initials: "JD",
+              name: "James D.",
+              bgColor: "bg-orange-500/20",
+              borderColor: "border-orange-400/30",
+              textColor: "text-orange-300",
+              testimonial: "This finally gave me direction. I was lost trying so many things online, but DCS showed me exactly what to do step by step."
+            },
+            {
+              initials: "SM",
+              name: "Sarah M.",
+              bgColor: "bg-blue-500/20",
+              borderColor: "border-blue-400/30",
+              textColor: "text-blue-300",
+              testimonial: "I stopped consuming and started executing. The system is so clear that I finally took action instead of just watching more videos."
+            },
+            {
+              initials: "AK",
+              name: "Alex K.",
+              bgColor: "bg-green-500/20",
+              borderColor: "border-green-400/30",
+              textColor: "text-green-300",
+              testimonial: "Simple, clear, and practical. No fluff, no confusion - just exactly what I needed to start my affiliate journey."
+            },
+            {
+              initials: "MR",
+              name: "Maria R.",
+              bgColor: "bg-purple-500/20",
+              borderColor: "border-purple-400/30",
+              textColor: "text-purple-300",
+              testimonial: "I wish I didn't overthink it. I hesitated for weeks, but once I joined, I realized how straightforward this actually is."
+            }
+          ].map((testimonial, index) => (
+            <motion.div
+              key={index}
+              variants={index % 2 === 0 ? slideInLeft : slideInRight}
+              whileHover={{ 
+                y: -5,
+                boxShadow: "0 20px 40px rgba(0,0,0,0.3)",
+                borderColor: "rgba(251, 146, 60, 0.5)"
+              }}
+              transition={{ duration: 0.3 }}
+              className="rounded-2xl bg-gradient-to-r from-[#1f2933] to-black p-6 border border-white/10"
+            >
+              <div className="flex items-start gap-4">
+                <motion.div 
+                  whileHover={{ scale: 1.1, rotate: 5 }}
+                  whileTap={{ scale: 0.95 }}
+                  transition={{ duration: 0.2 }}
+                  className={`w-12 h-12 rounded-full ${testimonial.bgColor} ${testimonial.borderColor} border flex items-center justify-center flex-shrink-0`}
+                >
+                  <span className={`${testimonial.textColor} font-bold text-lg`}>
+                    {testimonial.initials}
+                  </span>
+                </motion.div>
+                <div className="flex-1">
+                  <motion.div 
+                    variants={fadeInUp}
+                    className="flex items-center gap-2 mb-2"
+                  >
+                    <h4 className="text-white font-semibold">{testimonial.name}</h4>
+                    <motion.div 
+                      animate={{ scale: [1, 1.1, 1] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                      className="flex text-yellow-400 text-sm"
+                    >
+                      ⭐⭐⭐⭐⭐
+                    </motion.div>
+                  </motion.div>
+                  <motion.p 
+                    variants={fadeInUp}
+                    className="text-gray-300 text-sm leading-relaxed"
+                  >
+                    "{testimonial.testimonial}"
+                  </motion.p>
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </motion.div>
+      </AnimatedSection>
+
+      {/* FAQ */}
+      <AnimatedSection variants={fadeIn} className="max-w-3xl mx-auto mt-20">
+        <motion.h3 
+          variants={fadeInUp}
+          className="text-2xl md:text-3xl font-bold text-center mb-8 text-white"
+        >
+          Frequently Asked Questions
+        </motion.h3>
+        
+        <motion.div 
+          variants={staggerContainer}
+          className="space-y-4"
+        >
+          {[
+            {
+              id: 'faq1',
+              question: 'Do I need experience?',
+              answer: 'No. This is built for complete beginners. We assume you\'re starting from zero and provide step-by-step guidance for everything you need to know.'
+            },
+            {
+              id: 'faq2',
+              question: 'Do I need to create a product?',
+              answer: 'No. You promote digital products already created by professionals. We show you how to find high-converting products and earn commissions without creating anything yourself.'
+            },
+            {
+              id: 'faq3',
+              question: 'How long does it take to see results?',
+              answer: 'Results depend on how fast you take action. The system provides the steps, but your timeline depends on your consistency and effort. Some members see results in weeks, others take months - the system works if you work it.'
+            },
+            {
+              id: 'faq4',
+              question: 'Is this available worldwide?',
+              answer: 'Yes. Anyone with internet access can join. The strategies work globally, and we have members from multiple countries successfully implementing the system.'
+            },
+            {
+              id: 'faq5',
+              question: 'Is this another hype program?',
+              answer: 'No. This is a structured system. No action = no results. We provide proven frameworks and clear steps, but success requires your implementation. No magic buttons, just proven strategies that work when you do.'
+            }
+          ].map((faq, index) => (
+              <motion.div
+                key={faq.id}
+                variants={fadeInUp}
+                whileHover={{ 
+                  borderColor: "rgba(251, 146, 60, 0.3)",
+                  boxShadow: "0 10px 30px rgba(0,0,0,0.2)"
+                }}
+                transition={{ duration: 0.3 }}
+                className="rounded-2xl bg-gradient-to-r from-[#1f2933] to-black border border-white/10 overflow-hidden"
+              >
+                <motion.button
+                  onClick={() => toggleItem(faq.id)}
+                  whileHover={{ backgroundColor: "rgba(255,255,255,0.05)" }}
+                  transition={{ duration: 0.2 }}
+                  className="w-full px-6 py-4 text-left flex items-center justify-between transition-colors"
+                >
+                  <h4 className="text-white font-semibold text-base md:text-lg">
+                    {faq.question}
+                  </h4>
+                  <motion.svg
+                    className={`w-5 h-5 text-orange-400 transform transition-transform duration-300 ${openItems[faq.id] ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </motion.svg>
+                </motion.button>
+                <motion.div 
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ 
+                    height: openItems[faq.id] ? 'auto' : 0,
+                    opacity: openItems[faq.id] ? 1 : 0
+                  }}
+                  transition={{ duration: 0.3, ease: "easeInOut" }}
+                  className="overflow-hidden"
+                >
+                  <div className="px-6 pb-4">
+                    <p className="text-gray-300 text-sm md:text-base leading-relaxed">
+                      {faq.answer}
+                    </p>
+                  </div>
+                </motion.div>
+              </motion.div>
+            ))}
+        </motion.div>
+      </AnimatedSection>
+
+      {/* Additional screenshots section */}
+      <section className="py-14 md:py-16 bg-black border-b border-white/10">
+        <div className="max-w-5xl mx-auto px-4">
+          <AnimatedSection variants={fadeIn} className="text-center mb-12">
+            <motion.h3 
+              variants={fadeInUp}
+              className="text-2xl md:text-3xl font-bold text-white mb-4"
+            >
+              See What Our Members Are Achieving
+            </motion.h3>
+            <motion.p 
+              variants={fadeInUp}
+              className="text-gray-300 text-base max-w-2xl mx-auto"
+            >
+              Real results from real people who started exactly where you are right now
+            </motion.p>
+          </AnimatedSection>
+
+          <motion.div 
+            variants={staggerContainer}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+            className="grid gap-6 md:grid-cols-3"
+          >
+            {[
+              "/Screenshot 2025-12-19 225126.png",
+              "/Screenshot 2025-12-19 225135.png", 
+              "/Screenshot 2025-12-19 225147.png"
+            ].map((src, index) => (
+              <motion.div
+                key={index}
+                variants={scaleIn}
+                whileHover={{ 
+                  scale: 1.05, 
+                  y: -5,
+                  boxShadow: "0 20px 40px rgba(237,135,74,0.3)"
+                }}
+                transition={{ duration: 0.3 }}
+                className="rounded-2xl bg-gradient-to-b from-[#1f2933] to-black p-4 border border-white/10 flex flex-col gap-3"
+              >
                 <div className="rounded-xl overflow-hidden border border-white/10 bg-black/60">
                   <Image
-                    src="/Screenshot 2025-12-19 225126.png"
-                    alt="Student testimonial screenshot 1"
+                    src={src}
+                    alt={`Member success screenshot ${index + 1}`}
                     width={500}
                     height={320}
                     className="w-full h-auto object-cover"
                   />
                 </div>
-              </div>
+                <motion.div 
+                  variants={fadeInUp}
+                  className="text-center"
+                >
+                  <p className="text-orange-400 font-semibold text-sm">
+                    Member Success Story #{index + 1}
+                  </p>
+                  <p className="text-gray-400 text-xs mt-1">
+                    Results may vary • Individual effort required
+                  </p>
+                </motion.div>
+              </motion.div>
+            ))}
+          </motion.div>
 
-              <div className="rounded-2xl bg-gradient-to-b from-[#1f2933] to-black p-4 border border-white/10 flex flex-col gap-3">
-                <div className="rounded-xl overflow-hidden border border-white/10 bg-black/60">
-                  <Image
-                    src="/Screenshot 2025-12-19 225135.png"
-                    alt="Student testimonial screenshot 2"
-                    width={500}
-                    height={320}
-                    className="w-full h-auto object-cover"
-                  />
-                </div>
-              </div>
+          <AnimatedSection variants={fadeIn} className="text-center mt-12">
+            <motion.div
+              variants={scaleIn}
+              whileHover={{ scale: 1.05 }}
+              transition={{ duration: 0.3 }}
+              className="inline-block rounded-full bg-orange-500/10 border border-orange-400/30 px-6 py-3"
+            >
+              <p className="text-orange-200 font-semibold">
+                These could be your results sooner than you think
+              </p>
+            </motion.div>
+          </AnimatedSection>
+        </div>
+      </section>
 
-              <div className="rounded-2xl bg-gradient-to-b from-[#1f2933] to-black p-4 border border-white/10 flex flex-col gap-3">
-                <div className="rounded-xl overflow-hidden border border-white/10 bg-black/60">
-                  <Image
-                    src="/Screenshot 2025-12-19 225147.png"
-                    alt="Student testimonial screenshot 3"
-                    width={500}
-                    height={320}
-                    className="w-full h-auto object-cover"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="max-w-4xl mx-auto mt-12">
-            <h3 className="text-2xl md:text-3xl font-bold text-center mb-8 text-white">
-              What Our Members Are Saying
-            </h3>
+      {/* Final psychological section */}
+      <AnimatedSection variants={fadeIn} className="max-w-4xl mx-auto">
+        <motion.div 
+          variants={scaleIn}
+          animate={{ 
+            boxShadow: ["0 0 30px rgba(239,68,68,0.3)", "0 0 50px rgba(239,68,68,0.5)", "0 0 30px rgba(239,68,68,0.3)"]
+          }}
+          transition={{ duration: 3, repeat: Infinity }}
+          className="rounded-3xl bg-gradient-to-r from-red-900/20 via-orange-900/20 to-red-900/20 border border-red-500/30 px-8 py-10 mb-8 backdrop-blur-sm"
+        >
+          <div className="text-center space-y-6">
+            <motion.div 
+              variants={fadeInUp}
+              animate={{ 
+                scale: [1, 1.05, 1],
+                borderColor: ["rgba(239,68,68,0.5)", "rgba(251,146,60,0.8)", "rgba(239,68,68,0.5)"]
+              }}
+              transition={{ duration: 2, repeat: Infinity }}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-red-500/10 border border-red-400/30"
+            >
+              <motion.span
+                animate={{ opacity: [0.5, 1, 0.5] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+                className="text-red-300 text-sm font-medium"
+              >
+                ⚠️ CRITICAL DECISION POINT
+              </motion.span>
+            </motion.div>
             
-            <div className="grid gap-6 md:grid-cols-2">
-              {/* Testimonial 1 */}
-              <div className="rounded-2xl bg-gradient-to-r from-[#1f2933] to-black p-6 border border-white/10">
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-full bg-orange-500/20 border border-orange-400/30 flex items-center justify-center flex-shrink-0">
-                    <span className="text-orange-300 font-bold text-lg">JD</span>
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h4 className="text-white font-semibold">James D.</h4>
-                      <div className="flex text-yellow-400 text-sm">
-                        ⭐⭐⭐⭐⭐
-                      </div>
-                    </div>
-                    <p className="text-gray-300 text-sm leading-relaxed">
-                      "This finally gave me direction. I was lost trying so many things online, but DCS showed me exactly what to do step by step."
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Testimonial 2 */}
-              <div className="rounded-2xl bg-gradient-to-r from-[#1f2933] to-black p-6 border border-white/10">
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-full bg-blue-500/20 border border-blue-400/30 flex items-center justify-center flex-shrink-0">
-                    <span className="text-blue-300 font-bold text-lg">SM</span>
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h4 className="text-white font-semibold">Sarah M.</h4>
-                      <div className="flex text-yellow-400 text-sm">
-                        ⭐⭐⭐⭐⭐
-                      </div>
-                    </div>
-                    <p className="text-gray-300 text-sm leading-relaxed">
-                      "I stopped consuming and started executing. The system is so clear that I finally took action instead of just watching more videos."
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Testimonial 3 */}
-              <div className="rounded-2xl bg-gradient-to-r from-[#1f2933] to-black p-6 border border-white/10">
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-full bg-green-500/20 border border-green-400/30 flex items-center justify-center flex-shrink-0">
-                    <span className="text-green-300 font-bold text-lg">AK</span>
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h4 className="text-white font-semibold">Alex K.</h4>
-                      <div className="flex text-yellow-400 text-sm">
-                        ⭐⭐⭐⭐⭐
-                      </div>
-                    </div>
-                    <p className="text-gray-300 text-sm leading-relaxed">
-                      "Simple, clear, and practical. No fluff, no confusion - just exactly what I needed to start my affiliate journey."
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Testimonial 4 */}
-              <div className="rounded-2xl bg-gradient-to-r from-[#1f2933] to-black p-6 border border-white/10">
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-full bg-purple-500/20 border border-purple-400/30 flex items-center justify-center flex-shrink-0">
-                    <span className="text-purple-300 font-bold text-lg">MR</span>
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h4 className="text-white font-semibold">Maria R.</h4>
-                      <div className="flex text-yellow-400 text-sm">
-                        ⭐⭐⭐⭐⭐
-                      </div>
-                    </div>
-                    <p className="text-gray-300 text-sm leading-relaxed">
-                      "I wish I didn't overthink it. I hesitated for weeks, but once I joined, I realized how straightforward this actually is."
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <motion.h3 
+              variants={fadeInUp}
+              animate={{ 
+                textShadow: ["0 0 20px rgba(255,255,255,0.5)", "0 0 30px rgba(255,255,255,0.8)", "0 0 20px rgba(255,255,255,0.5)"]
+              }}
+              transition={{ duration: 3, repeat: Infinity }}
+              className="text-2xl md:text-3xl font-bold text-white"
+            >
+              You've Reached Your Moment of Truth
+            </motion.h3>
+            
+            <motion.p 
+              variants={fadeInUp}
+              className="text-lg text-gray-200 max-w-2xl mx-auto"
+            >
+              In 60 seconds, you'll make one of two choices that will define your next 6 months
+            </motion.p>
+            
+            <motion.div 
+              variants={staggerContainer}
+              className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto mt-8"
+            >
+              {/* Path 1: Stay Stuck */}
+              <motion.div
+                variants={slideInLeft}
+                whileHover={{ 
+                  scale: 1.02,
+                  borderColor: "rgba(239,68,68,0.6)",
+                  boxShadow: "0 20px 40px rgba(239,68,68,0.3)"
+                }}
+                transition={{ duration: 0.3 }}
+                className="rounded-2xl bg-black/40 border border-red-500/20 p-6"
+              >
+                <motion.div 
+                  animate={{ x: [-2, 2, -2] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                  className="text-red-300 text-2xl mb-3"
+                >
+                  ❌ PATH OF REGRET
+                </motion.div>
+                <h4 className="text-white font-semibold mb-3">Close This Page & Stay Stuck</h4>
+                <motion.ul 
+                  variants={staggerContainer}
+                  className="text-gray-300 text-sm space-y-2 text-left"
+                >
+                  {[
+                    "Tomorrow looks exactly like today",
+                    "Same financial stress, same frustration",
+                    "Watch others succeed while you hesitate",
+                    "Keep asking 'what if' for months",
+                    "This opportunity disappears forever"
+                  ].map((item, index) => (
+                    <motion.li 
+                      key={index}
+                      variants={fadeInUp}
+                      whileHover={{ x: 5 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      • {item}
+                    </motion.li>
+                  ))}
+                </motion.ul>
+                <motion.div 
+                  variants={fadeInUp}
+                  animate={{ opacity: [0.7, 1, 0.7] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                  className="mt-4 text-red-300 text-sm font-medium"
+                >
+                  The price increases when you leave
+                </motion.div>
+              </motion.div>
+              
+              {/* Path 2: Take Action */}
+              <motion.div
+                variants={slideInRight}
+                whileHover={{ 
+                  scale: 1.02,
+                  borderColor: "rgba(34,197,94,0.6)",
+                  boxShadow: "0 20px 40px rgba(34,197,94,0.3)"
+                }}
+                transition={{ duration: 0.3 }}
+                className="rounded-2xl bg-gradient-to-b from-green-900/20 to-transparent border border-green-500/30 p-6 relative overflow-hidden"
+              >
+                <motion.div 
+                  animate={{ rotate: [0, 10, -10, 0] }}
+                  transition={{ duration: 4, repeat: Infinity }}
+                  className="absolute top-0 right-0 text-green-400 text-6xl opacity-20"
+                >
+                  ✓
+                </motion.div>
+                <motion.div 
+                  animate={{ scale: [1, 1.05, 1] }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                  className="text-green-300 text-2xl mb-3"
+                >
+                  ✅ PATH OF FREEDOM
+                </motion.div>
+                <h4 className="text-white font-semibold mb-3">Join DCS & Transform Your Life</h4>
+                <motion.ul 
+                  variants={staggerContainer}
+                  className="text-gray-300 text-sm space-y-2 text-left"
+                >
+                  {[
+                    "Step-by-step system starting today",
+                    "Finally understand how online income works",
+                    "Join thousands already making progress",
+                    "Build skills that pay you for life",
+                    "Lock in $18 price before it's gone"
+                  ].map((item, index) => (
+                    <motion.li 
+                      key={index}
+                      variants={fadeInUp}
+                      whileHover={{ x: 5 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      • {item}
+                    </motion.li>
+                  ))}
+                </motion.ul>
+                <motion.div 
+                  variants={fadeInUp}
+                  animate={{ opacity: [0.7, 1, 0.7] }}
+                  transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
+                  className="mt-4 text-green-300 text-sm font-medium"
+                >
+                  Your future self will thank you
+                </motion.div>
+              </motion.div>
+            </motion.div>
+            
+            <motion.div 
+              variants={fadeInUp}
+              className="mt-8 space-y-4"
+            >
+              <motion.p 
+                animate={{ 
+                  textShadow: ["0 0 10px rgba(251,146,60,0.5)", "0 0 20px rgba(251,146,60,0.8)", "0 0 10px rgba(251,146,60,0.5)"]
+                }}
+                transition={{ duration: 3, repeat: Infinity }}
+                className="text-orange-200 text-lg font-semibold"
+              >
+                The universe doesn't reward intention. It rewards ACTION.
+              </motion.p>
+              <motion.p 
+                variants={fadeInUp}
+                className="text-gray-300 text-sm max-w-2xl mx-auto"
+              >
+                Every successful person in DCS was once exactly where you are right now - 
+                scrolling, reading, deciding. The only difference? They clicked the button.
+              </motion.p>
+            </motion.div>
           </div>
+        </motion.div>
 
-          <div className="text-center space-y-3">
+        <motion.div 
+          variants={fadeInUp}
+          className="text-center"
+        >
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            transition={{ duration: 0.2 }}
+          >
             <Button
               onClick={handleGetStarted}
               size="lg"
               className="bg-[#ed874a] hover:bg-orange-600 text-white px-10 py-6 rounded-full text-base md:text-lg font-semibold shadow-[0_18px_45px_rgba(237,135,74,0.55)] inline-flex items-center justify-center gap-2"
             >
-              Join DCS Now
+              Start you DCS Journey Now
             </Button>
-            <div className="grid gap-1 text-xs md:text-sm text-gray-200 max-w-md mx-auto">
-              <p>✔ Start immediately</p>
-              <p>✔ Learn at your own pace</p>
-              <p>✔ Clear instructions — no guesswork</p>
-              <p>✔ Built for beginners</p>
-            </div>
-          </div>
+          </motion.div>
 
-          <div className="max-w-3xl mx-auto">
-            <h3 className="text-2xl md:text-3xl font-bold text-center mb-8 text-white">
-              Frequently Asked Questions
-            </h3>
-            
-            <div className="space-y-4">
-              {/* FAQ Item 1 */}
-              <div className="rounded-2xl bg-gradient-to-r from-[#1f2933] to-black border border-white/10 overflow-hidden">
-                <button
-                  onClick={() => {
-                    const element = document.getElementById('faq1');
-                    if (element.classList.contains('hidden')) {
-                      element.classList.remove('hidden');
-                      element.classList.add('block');
-                    } else {
-                      element.classList.remove('block');
-                      element.classList.add('hidden');
-                    }
-                  }}
-                  className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-white/5 transition-colors"
-                >
-                  <h4 className="text-white font-semibold text-base md:text-lg">
-                    Do I need experience?
-                  </h4>
-                  <svg
-                    className="w-5 h-5 text-orange-400 transform transition-transform"
-                    id="faq1-arrow"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-                <div id="faq1" className="hidden px-6 pb-4">
-                  <p className="text-gray-300 text-sm md:text-base leading-relaxed">
-                    No. This is built for complete beginners. We assume you're starting from zero and provide step-by-step guidance for everything you need to know.
-                  </p>
-                </div>
-              </div>
-
-              {/* FAQ Item 2 */}
-              <div className="rounded-2xl bg-gradient-to-r from-[#1f2933] to-black border border-white/10 overflow-hidden">
-                <button
-                  onClick={() => {
-                    const element = document.getElementById('faq2');
-                    if (element.classList.contains('hidden')) {
-                      element.classList.remove('hidden');
-                      element.classList.add('block');
-                    } else {
-                      element.classList.remove('block');
-                      element.classList.add('hidden');
-                    }
-                  }}
-                  className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-white/5 transition-colors"
-                >
-                  <h4 className="text-white font-semibold text-base md:text-lg">
-                    Do I need to create a product?
-                  </h4>
-                  <svg
-                    className="w-5 h-5 text-orange-400 transform transition-transform"
-                    id="faq2-arrow"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-                <div id="faq2" className="hidden px-6 pb-4">
-                  <p className="text-gray-300 text-sm md:text-base leading-relaxed">
-                    No. You promote digital products already created by professionals. We show you how to find high-converting products and earn commissions without creating anything yourself.
-                  </p>
-                </div>
-              </div>
-
-              {/* FAQ Item 3 */}
-              <div className="rounded-2xl bg-gradient-to-r from-[#1f2933] to-black border border-white/10 overflow-hidden">
-                <button
-                  onClick={() => {
-                    const element = document.getElementById('faq3');
-                    if (element.classList.contains('hidden')) {
-                      element.classList.remove('hidden');
-                      element.classList.add('block');
-                    } else {
-                      element.classList.remove('block');
-                      element.classList.add('hidden');
-                    }
-                  }}
-                  className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-white/5 transition-colors"
-                >
-                  <h4 className="text-white font-semibold text-base md:text-lg">
-                    How long does it take to see results?
-                  </h4>
-                  <svg
-                    className="w-5 h-5 text-orange-400 transform transition-transform"
-                    id="faq3-arrow"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-                <div id="faq3" className="hidden px-6 pb-4">
-                  <p className="text-gray-300 text-sm md:text-base leading-relaxed">
-                    Results depend on how fast you take action. The system provides the steps, but your timeline depends on your consistency and effort. Some members see results in weeks, others take months - the system works if you work it.
-                  </p>
-                </div>
-              </div>
-
-              {/* FAQ Item 4 */}
-              <div className="rounded-2xl bg-gradient-to-r from-[#1f2933] to-black border border-white/10 overflow-hidden">
-                <button
-                  onClick={() => {
-                    const element = document.getElementById('faq4');
-                    if (element.classList.contains('hidden')) {
-                      element.classList.remove('hidden');
-                      element.classList.add('block');
-                    } else {
-                      element.classList.remove('block');
-                      element.classList.add('hidden');
-                    }
-                  }}
-                  className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-white/5 transition-colors"
-                >
-                  <h4 className="text-white font-semibold text-base md:text-lg">
-                    Is this available worldwide?
-                  </h4>
-                  <svg
-                    className="w-5 h-5 text-orange-400 transform transition-transform"
-                    id="faq4-arrow"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-                <div id="faq4" className="hidden px-6 pb-4">
-                  <p className="text-gray-300 text-sm md:text-base leading-relaxed">
-                    Yes. Anyone with internet access can join. The strategies work globally, and we have members from multiple countries successfully implementing the system.
-                  </p>
-                </div>
-              </div>
-
-              {/* FAQ Item 5 */}
-              <div className="rounded-2xl bg-gradient-to-r from-[#1f2933] to-black border border-white/10 overflow-hidden">
-                <button
-                  onClick={() => {
-                    const element = document.getElementById('faq5');
-                    if (element.classList.contains('hidden')) {
-                      element.classList.remove('hidden');
-                      element.classList.add('block');
-                    } else {
-                      element.classList.remove('block');
-                      element.classList.add('hidden');
-                    }
-                  }}
-                  className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-white/5 transition-colors"
-                >
-                  <h4 className="text-white font-semibold text-base md:text-lg">
-                    Is this another hype program?
-                  </h4>
-                  <svg
-                    className="w-5 h-5 text-orange-400 transform transition-transform"
-                    id="faq5-arrow"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-                <div id="faq5" className="hidden px-6 pb-4">
-                  <p className="text-gray-300 text-sm md:text-base leading-relaxed">
-                    No. This is a structured system. No action = no results. We provide proven frameworks and clear steps, but success requires your implementation. No magic buttons, just proven strategies that work when you do.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="max-w-4xl mx-auto">
-            {/* Psychological trigger section */}
-            <div className="rounded-3xl bg-gradient-to-r from-red-900/20 via-orange-900/20 to-red-900/20 border border-red-500/30 px-8 py-10 mb-8 backdrop-blur-sm">
-              <div className="text-center space-y-6">
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-red-500/10 border border-red-400/30">
-                  <span className="text-red-300 text-sm font-medium animate-pulse">⚠️ CRITICAL DECISION POINT</span>
-                </div>
-                
-                <h3 className="text-2xl md:text-3xl font-bold text-white">
-                  You've Reached Your Moment of Truth
-                </h3>
-                
-                <p className="text-lg text-gray-200 max-w-2xl mx-auto">
-                  In 60 seconds, you'll make one of two choices that will define your next 6 months
-                </p>
-                
-                <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto mt-8">
-                  {/* Path 1: Stay Stuck */}
-                  <div className="rounded-2xl bg-black/40 border border-red-500/20 p-6">
-                    <div className="text-red-300 text-2xl mb-3">❌ PATH OF REGRET</div>
-                    <h4 className="text-white font-semibold mb-3">Close This Page & Stay Stuck</h4>
-                    <ul className="text-gray-300 text-sm space-y-2 text-left">
-                      <li>• Tomorrow looks exactly like today</li>
-                      <li>• Same financial stress, same frustration</li>
-                      <li>• Watch others succeed while you hesitate</li>
-                      <li>• Keep asking "what if" for months</li>
-                      <li>• This opportunity disappears forever</li>
-                    </ul>
-                    <div className="mt-4 text-red-300 text-sm font-medium">
-                      The price increases when you leave
-                    </div>
-                  </div>
-                  
-                  {/* Path 2: Take Action */}
-                  <div className="rounded-2xl bg-gradient-to-b from-green-900/20 to-transparent border border-green-500/30 p-6 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 text-green-400 text-6xl opacity-20">✓</div>
-                    <div className="text-green-300 text-2xl mb-3">✅ PATH OF FREEDOM</div>
-                    <h4 className="text-white font-semibold mb-3">Join DCS & Transform Your Life</h4>
-                    <ul className="text-gray-300 text-sm space-y-2 text-left">
-                      <li>• Step-by-step system starting today</li>
-                      <li>• Finally understand how online income works</li>
-                      <li>• Join thousands already making progress</li>
-                      <li>• Build skills that pay you for life</li>
-                      <li>• Lock in $18 price before it's gone</li>
-                    </ul>
-                    <div className="mt-4 text-green-300 text-sm font-medium">
-                      Your future self will thank you
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="mt-8 space-y-4">
-                  <p className="text-orange-200 text-lg font-semibold">
-                    The universe doesn't reward intention. It rewards ACTION.
-                  </p>
-                  <p className="text-gray-300 text-sm max-w-2xl mx-auto">
-                    Every successful person in DCS was once exactly where you are right now - 
-                    scrolling, reading, deciding. The only difference? They clicked the button.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="text-center">
-              <Button
-                onClick={handleGetStarted}
-                size="lg"
-                className="bg-[#ed874a] hover:bg-orange-600 text-white px-10 py-6 rounded-full text-base md:text-lg font-semibold shadow-[0_18px_45px_rgba(237,135,74,0.55)] inline-flex items-center justify-center gap-2"
+          <motion.div 
+            variants={staggerContainer}
+            className="grid gap-1 text-xs md:text-sm text-gray-200 max-w-md mx-auto mt-4"
+          >
+            {[
+              "Price increases when timer ends",
+              "This offer will not repeat",
+              "Action-takers only",
+              "Your move"
+            ].map((item, index) => (
+              <motion.p 
+                key={index}
+                variants={fadeInUp}
+                whileHover={{ x: 5 }}
+                transition={{ duration: 0.2 }}
               >
-                Start you DCS Journey Now
-              </Button>
-
-              <div className="grid gap-1 text-xs md:text-sm text-gray-200 max-w-md mx-auto mt-4">
-                <p>✔ Price increases when timer ends</p>
-                <p>✔ This offer will not repeat</p>
-                <p>✔ Action-takers only</p>
-                <p>✔ Your move</p>
-              </div>
-              <p className="text-sm md:text-base text-gray-100 mt-2">
-                🎁 Bonus stack worth $200 included today only
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
+                ✔ {item}
+              </motion.p>
+            ))}
+          </motion.div>
+          <motion.p 
+            variants={fadeInUp}
+            animate={{ 
+              scale: [1, 1.02, 1],
+              textShadow: ["0 0 10px rgba(251,146,60,0.5)", "0 0 15px rgba(251,146,60,0.8)", "0 0 10px rgba(251,146,60,0.5)"]
+            }}
+            transition={{ duration: 2, repeat: Infinity }}
+            className="text-sm md:text-base text-gray-100 mt-2"
+          >
+            🎁 Bonus stack worth $200 included today only
+          </motion.p>
+        </motion.div>
+      </AnimatedSection>
 
       {/* Footer */}
       <footer className="py-8 px-4 border-t border-white/10 bg-black/95 text-gray-400">
@@ -1676,3 +1217,14 @@ function DCSDarkPremiumLayout(props: DCSDarkPremiumLayoutProps) {
   )
 }
 
+export default function DCSSalesPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-black">
+        <Loader2 className="w-8 h-8 animate-spin text-yellow-400" />
+      </div>
+    }>
+      <DCSSalesPageContent />
+    </Suspense>
+  )
+}

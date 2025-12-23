@@ -81,7 +81,9 @@ const BrowseCoursesPage = () => {
       isBestseller: Math.random() > 0.7, // Random bestseller status for now
       isNew: isNew,
       enrolled: isEnrolled,
-      price: course.price || 0
+      price: course.price || 0,
+      modules: course.modules || [], // Pass through modules from backend
+      instructorAvatar: course.instructor_avatar || null // Add instructor avatar from backend
     }
   })
 
@@ -241,16 +243,11 @@ const BrowseCoursesPage = () => {
                   <BookOpen className="w-3 h-3 mr-1" />
                   {course.lessonsCount} lessons
                 </div>
-                <div className="flex items-center">
-                  <Users className="w-3 h-3 mr-1" />
-                  {course.studentsCount.toLocaleString()}
-                </div>
               </div>
               
               <div className="flex items-center mb-3">
                 <Star className="w-4 h-4 text-yellow-500 mr-1" />
                 <span className="text-sm font-medium">{course.rating}</span>
-                <span className="text-xs text-gray-500 ml-1">({course.studentsCount})</span>
               </div>
               
               <div className="flex flex-wrap gap-1 mb-3">

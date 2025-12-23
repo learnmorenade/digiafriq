@@ -1,10 +1,9 @@
 "use client"
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { 
   User, 
   CreditCard,
   Save,
-  Camera,
   Edit,
   Plus,
   Trash2,
@@ -19,11 +18,22 @@ import { useAuth } from '@/lib/supabase/auth'
 import { useMembershipDetails } from '@/lib/hooks/useMembershipDetails'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import Image from 'next/image'
 
 const UnifiedProfilePage = () => {
   const router = useRouter()
   const { profile: authProfile } = useAuth()
   const { hasDCS, loading: dcsLoading } = useMembershipDetails()
+  
+  // Generate a random avatar for the user
+  const [userAvatar, setUserAvatar] = useState('')
+  
+  useEffect(() => {
+    // Generate a random avatar based on user ID or email
+    const avatarSeed = authProfile?.id || authProfile?.email || Math.random().toString()
+    const avatarUrl = `https://picsum.photos/seed/${avatarSeed}/200/200.jpg`
+    setUserAvatar(avatarUrl)
+  }, [authProfile?.id, authProfile?.email])
   
   const { 
     profile, 
@@ -290,19 +300,27 @@ const UnifiedProfilePage = () => {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Profile Picture */}
+              {/* Profile Picture - Random Avatar */}
               <div className="flex items-center space-x-4">
-                <div className="w-20 h-20 bg-[#ed874a] rounded-full flex items-center justify-center">
-                  <span className="text-white text-2xl font-bold">
-                    {profileForm.firstName.charAt(0).toUpperCase() || profile?.email?.charAt(0).toUpperCase() || 'U'}
-                  </span>
+                <div className="relative w-20 h-20 rounded-full overflow-hidden border-2 border-gray-200">
+                  {userAvatar ? (
+                    <Image
+                      src={userAvatar}
+                      alt="Profile Avatar"
+                      fill
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-[#ed874a] to-[#d76f32] flex items-center justify-center">
+                      <span className="text-white text-2xl font-bold">
+                        {profileForm.firstName.charAt(0).toUpperCase() || profile?.email?.charAt(0).toUpperCase() || 'U'}
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <div>
-                  <Button variant="outline" size="sm">
-                    <Camera className="w-4 h-4 mr-2" />
-                    Change Photo
-                  </Button>
-                  <p className="text-xs text-gray-500 mt-1">JPG, PNG max 2MB</p>
+                  <p className="text-sm text-gray-600">Profile avatar is automatically generated</p>
+                  <p className="text-xs text-gray-500">Cannot be changed</p>
                 </div>
               </div>
 
@@ -424,9 +442,6 @@ const UnifiedProfilePage = () => {
                   <CardTitle className="text-lg font-semibold flex items-center">
                     <CreditCard className="w-5 h-5 mr-2" />
                     Payment Details
-                    <span className="ml-2 text-xs bg-[#ed874a]/10 text-[#ed874a] px-2 py-1 rounded-full">
-                      Affiliate
-                    </span>
                   </CardTitle>
                   {paymentMethods.length < 2 && (
                     <Button 
@@ -643,10 +658,21 @@ const UnifiedProfilePage = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="text-center">
-                <div className="w-24 h-24 bg-[#ed874a] rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-white text-3xl font-bold">
-                    {profileForm.firstName.charAt(0).toUpperCase() || 'U'}
-                  </span>
+                <div className="relative w-24 h-24 rounded-full overflow-hidden border-2 border-gray-200 mx-auto mb-4">
+                  {userAvatar ? (
+                    <Image
+                      src={userAvatar}
+                      alt="Profile Avatar"
+                      fill
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-[#ed874a] to-[#d76f32] flex items-center justify-center">
+                      <span className="text-white text-3xl font-bold">
+                        {profileForm.firstName.charAt(0).toUpperCase() || 'U'}
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <h3 className="font-semibold text-lg">
                   {profileForm.firstName} {profileForm.lastName}

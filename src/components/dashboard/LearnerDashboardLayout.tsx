@@ -2,7 +2,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { 
-  Search, 
   Bell, 
   ChevronDown, 
   ChevronRight,
@@ -46,11 +45,19 @@ const LearnerDashboardLayout = ({ children, title = "Dashboard" }: LearnerDashbo
   const [expandedMenus, setExpandedMenus] = useState<string[]>([])
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false)
   const [switchingRole, setSwitchingRole] = useState(false)
+  const [userAvatar, setUserAvatar] = useState('')
   const pathname = usePathname()
   const router = useRouter()
   const mobileDropdownRef = useRef<HTMLDivElement>(null)
   const desktopDropdownRef = useRef<HTMLDivElement>(null)
   const { user, profile, signOut, refreshProfile } = useAuth()
+
+  // Generate a random avatar for the user
+  useEffect(() => {
+    const avatarSeed = profile?.id || user?.id || user?.email || Math.random().toString()
+    const avatarUrl = `https://picsum.photos/seed/${avatarSeed}/200/200.jpg`
+    setUserAvatar(avatarUrl)
+  }, [profile?.id, user?.id, user?.email])
 
   // Get user's first name from profile
   const getFirstName = () => {
@@ -107,11 +114,6 @@ const LearnerDashboardLayout = ({ children, title = "Dashboard" }: LearnerDashbo
       title: "Profile Settings", 
       icon: User,
       href: "/dashboard/profile"
-    },
-    { 
-      title: "Become Affiliate", 
-      icon: Users,
-      href: "/dashboard/learner/affiliate-upgrade"
     },
     { 
       title: "Log out", 
@@ -326,11 +328,6 @@ const LearnerDashboardLayout = ({ children, title = "Dashboard" }: LearnerDashbo
             {/* Mobile: Optimized compact layout */}
             <div className="lg:hidden flex items-center justify-end w-full gap-2">
               <Button variant="ghost" size="sm" className="p-1.5 hover:bg-gray-100">
-                <Search className="w-4 h-4" />
-                <span className="sr-only">Search</span>
-              </Button>
-
-              <Button variant="ghost" size="sm" className="p-1.5 hover:bg-gray-100">
                 <Bell className="w-4 h-4" />
                 <span className="sr-only">Notifications</span>
               </Button>
@@ -340,8 +337,20 @@ const LearnerDashboardLayout = ({ children, title = "Dashboard" }: LearnerDashbo
                   className="flex items-center space-x-1.5 min-w-0 flex-1 justify-end cursor-pointer"
                   onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
                 >
-                  <div className="w-6 h-6 bg-[#ed874a] rounded-full flex items-center justify-center flex-shrink-0">
-                    <span className="text-white text-xs font-medium">{getUserInitial()}</span>
+                  <div className="w-6 h-6 rounded-full overflow-hidden border border-gray-200 flex-shrink-0">
+                    {userAvatar ? (
+                      <Image
+                        src={userAvatar}
+                        alt="Profile Avatar"
+                        width={24}
+                        height={24}
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-[#ed874a] flex items-center justify-center">
+                        <span className="text-white text-xs font-medium">{getUserInitial()}</span>
+                      </div>
+                    )}
                   </div>
                   <span className="text-xs font-medium truncate max-w-[65px]">{getFirstName()}</span>
                   <ChevronDown className="w-3 h-3 text-gray-400 flex-shrink-0" />
@@ -394,14 +403,6 @@ const LearnerDashboardLayout = ({ children, title = "Dashboard" }: LearnerDashbo
 
           {/* Desktop: Horizontal layout */}
           <div className="hidden lg:flex items-center justify-end space-x-4 w-full">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input 
-                placeholder="Search courses..." 
-                className="pl-10 w-64 bg-gray-50 border-gray-200"
-              />
-            </div>
-
             <Button variant="ghost" size="sm">
               <Bell className="w-5 h-5" />
             </Button>
@@ -411,8 +412,20 @@ const LearnerDashboardLayout = ({ children, title = "Dashboard" }: LearnerDashbo
                 className="flex items-center space-x-2 cursor-pointer"
                 onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
               >
-                <div className="w-8 h-8 bg-[#ed874a] rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-medium">{getUserInitial()}</span>
+                <div className="w-8 h-8 rounded-full overflow-hidden border border-gray-200">
+                  {userAvatar ? (
+                    <Image
+                      src={userAvatar}
+                      alt="Profile Avatar"
+                      width={32}
+                      height={32}
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-[#ed874a] flex items-center justify-center">
+                      <span className="text-white text-sm font-medium">{getUserInitial()}</span>
+                    </div>
+                  )}
                 </div>
                 <span className="text-sm font-medium">{getFirstName()}</span>
                 <ChevronDown className="w-4 h-4 text-gray-400" />

@@ -177,10 +177,9 @@ const AnalyticsPage = () => {
       const dcsSales = dcsUsers * DCS_PRICE_USD
       const learnerOnlySales = learnerOnlyUsers * MEMBERSHIP_PRICE_USD
       const totalSales = dcsSales + learnerOnlySales + payments.reduce((sum: number, p: any) => {
-        if (p.payment_type === 'course') {
-          return sum + (p.base_amount || p.amount / 10) // Approximate USD conversion
-        }
-        return sum
+        // Use base_currency_amount if available (USD), otherwise fallback to base_amount or conversion
+        const usdAmount = p.base_currency_amount || p.base_amount || (p.currency === 'USD' ? p.amount : p.amount / 10)
+        return sum + usdAmount
       }, 0)
 
       // Generate time series data

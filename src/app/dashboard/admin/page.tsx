@@ -28,7 +28,7 @@ const AdminDashboard = () => {
     },
     {
       title: "Total Revenue",
-      value: `$${stats.totalRevenue.toLocaleString()}`,
+      value: `$${stats.totalRevenue.toLocaleString()} USD`,
       change: "+23%",
       icon: DollarSign,
       color: "text-green-600",
@@ -179,7 +179,9 @@ const AdminDashboard = () => {
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold text-gray-900">${payment.amount.toFixed(2)}</p>
+                      <p className="font-semibold text-gray-900">
+                        ${((payment as any).base_currency_amount || (payment.currency === 'USD' ? payment.amount : payment.amount / 10)).toFixed(2)} USD
+                      </p>
                       <span className={`text-xs px-2 py-1 rounded-full ${
                         payment.status === 'completed' ? 'bg-green-100 text-green-700' :
                         payment.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :

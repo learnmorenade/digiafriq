@@ -88,6 +88,28 @@ const SalesActivityPage = () => {
     setCurrentPage(1) // Reset to first page when changing items per page
   }
 
+  const handleExport = () => {
+    // Create CSV content
+    const headers = ['Order ID', 'Tier', 'Commission', 'Date']
+    const csvContent = [
+      headers.join(','),
+      ...salesActivity.map(sale => 
+        [sale.orderId, sale.tier, sale.commission, sale.date].join(',')
+      )
+    ].join('\n')
+    
+    // Create blob and download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', `sales-activity-${new Date().toISOString().split('T')[0]}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
   // const getStatusIcon = (status: string) => {
   //   switch (status) {
   //     case 'Completed':
@@ -131,7 +153,7 @@ const SalesActivityPage = () => {
                 <Filter className="w-4 h-4 mr-2" />
                 Apply Filter
               </Button>
-              <Button variant="outline" className="w-full lg:w-auto">
+              <Button variant="outline" className="w-full lg:w-auto" onClick={handleExport}>
                 <Download className="w-4 h-4 mr-2" />
                 Export
               </Button>
@@ -181,19 +203,6 @@ const SalesActivityPage = () => {
               >
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-gray-900">ID</span>
-                    <span className="text-sm text-gray-600">{sale.id}</span>
-                  </div>
-                  
-                  <div className="flex justify-between items-start">
-                    <span className="text-sm font-medium text-gray-900">Customer</span>
-                    <div className="text-right">
-                      <div className="text-sm text-gray-600">{sale.customer}</div>
-                      <div className="text-xs text-gray-500">{sale.email}</div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex justify-between items-center">
                     <span className="text-sm font-medium text-gray-900">Order Id</span>
                     <span className="text-sm text-gray-600">{sale.orderId}</span>
                   </div>
@@ -241,31 +250,24 @@ const SalesActivityPage = () => {
             <table className="w-full" style={{ minWidth: '700px', tableLayout: 'fixed' }}>
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="text-left py-3 px-4 lg:px-6 font-medium text-sm text-gray-700" style={{ minWidth: '120px' }}>ID</th>
-                  <th className="text-left py-3 px-4 lg:px-6 font-medium text-sm text-gray-700" style={{ minWidth: '150px' }}>Customer</th>
                   <th className="text-left py-3 px-4 lg:px-6 font-medium text-sm text-gray-700" style={{ minWidth: '140px' }}>Order ID</th>
                   <th className="text-left py-3 px-4 lg:px-6 font-medium text-sm text-gray-700" style={{ minWidth: '100px' }}>Tier</th>
+                  <th className="text-left py-3 px-4 lg:px-6 font-medium text-sm text-gray-700" style={{ minWidth: '120px' }}>Commission</th>
                   <th className="text-left py-3 px-4 lg:px-6 font-medium text-sm text-gray-700" style={{ minWidth: '120px' }}>Date</th>
                 </tr>
               </thead>
               <tbody>
                 {currentItems.map((sale, index) => (
                   <tr key={sale.id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-4 px-4 lg:px-6 text-sm text-gray-900 font-medium">{sale.id}</td>
-                    <td className="py-4 px-4 lg:px-6 text-sm">
-                      <div>
-                        <div className="text-gray-900 font-medium">{sale.customer}</div>
-                        <div className="text-gray-500 text-xs">{sale.email}</div>
-                      </div>
-                    </td>
                     <td className="py-4 px-4 lg:px-6 text-sm text-gray-900">{sale.orderId}</td>
                     <td className="py-4 px-4 lg:px-6 text-sm text-gray-900">{sale.tier}</td>
+                    <td className="py-4 px-4 lg:px-6 text-sm text-gray-900 font-medium">{sale.commission}</td>
                     <td className="py-4 px-4 lg:px-6 text-sm text-gray-900">{sale.date}</td>
                   </tr>
                 ))}
                 {/* Total Row */}
                 <tr className="bg-gray-50 border-t-2 border-gray-200">
-                  <td className="py-4 px-4 lg:px-6 text-sm text-gray-900 font-semibold" colSpan={2}>Total Sales</td>
+                  <td className="py-4 px-4 lg:px-6 text-sm text-gray-900 font-semibold" colSpan={1}>Total Sales</td>
                   <td className="py-4 px-4 lg:px-6 text-sm text-gray-900 font-semibold">{salesActivity.length} Orders</td>
                   <td className="py-4 px-4 lg:px-6 text-sm text-gray-900 font-semibold">-</td>
                   <td className="py-4 px-4 lg:px-6 text-sm text-gray-900 font-semibold">-</td>

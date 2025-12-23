@@ -137,9 +137,9 @@ const LoginPage = () => {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-[#ed874a]/5 via-white to-[#d76f32]/5">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-white to-amber-50">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-[#ed874a] mx-auto mb-4" />
+          <Loader2 className="w-8 h-8 animate-spin text-orange-600 mx-auto mb-4" />
           <p className="text-gray-600">Loading...</p>
         </div>
       </div>
@@ -147,26 +147,28 @@ const LoginPage = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-[#ed874a]/5 via-white to-[#d76f32]/5 px-4 py-8">
-      <div className="w-full max-w-md">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="flex justify-center mb-6">
-            <Image
-              src="/digiafriqlogo.png"
-              alt="DigiAfriq Logo"
-              width={60}
-              height={60}
-              className="rounded-lg"
-            />
+    <div className="h-screen flex items-center justify-center bg-white px-4 py-8 overflow-hidden">
+      <div className="w-full max-w-5xl flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
+        {/* Left Side - Login Form */}
+        <div className="flex-1 w-full lg:w-auto max-w-sm">
+          {/* Logo */}
+          <div className="text-center mb-6">
+            <div className="flex justify-center mb-4">
+              <Image
+                src="/digiafriqlogo.png"
+                alt="DigiAfriq Logo"
+                width={80}
+                height={80}
+                className="rounded-lg shadow-lg"
+              />
+            </div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h1>
+            <p className="text-gray-600">Sign in to your DigiAfriq account</p>
           </div>
-          <h1 className="text-3xl font-bold text-[#4A0D66] mb-2">Welcome Back</h1>
-          <p className="text-gray-600">Sign in to your DigiAfriq account</p>
-        </div>
 
         {/* Login Form */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
-          <form onSubmit={handleLogin} className="space-y-6">
+        <div className="bg-white border border-gray-200 rounded-2xl shadow-xl p-6">
+          <form onSubmit={handleLogin} className="space-y-5">
             {/* Email Field */}
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
@@ -180,7 +182,7 @@ const LoginPage = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
-                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ed874a] focus:border-transparent transition"
+                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition"
                   disabled={loading}
                 />
               </div>
@@ -199,7 +201,7 @@ const LoginPage = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ed874a] focus:border-transparent transition"
+                  className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition"
                   disabled={loading}
                 />
                 <button
@@ -224,7 +226,7 @@ const LoginPage = () => {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full bg-[#ed874a] hover:bg-[#d76f32] text-white font-semibold py-2.5 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full bg-gradient-to-r from-[#ed874a] to-[#ed874a] hover:from-[#d9773a] hover:to-[#d9773a] text-white font-semibold py-2.5 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
             >
               {loading ? (
                 <>
@@ -252,7 +254,7 @@ const LoginPage = () => {
             <Button
               type="button"
               variant="outline"
-              className="w-full border-2 border-[#ed874a] text-[#ed874a] hover:bg-[#ed874a]/5 font-semibold py-2.5 rounded-lg transition"
+              className="w-full border-2 border-[#ed874a] text-[#ed874a] hover:bg-[#ed874a] hover:bg-opacity-10 font-semibold py-2.5 rounded-lg transition"
             >
               Create Account
             </Button>
@@ -260,12 +262,23 @@ const LoginPage = () => {
         </div>
 
         {/* Footer */}
-        <p className="text-center text-sm text-gray-600 mt-6">
+        <p className="text-center text-xs text-gray-600 mt-4">
           By signing in, you agree to our{' '}
           <Link href="/legal-policies" className="text-[#ed874a] hover:underline">
             Terms & Policies
           </Link>
         </p>
+        </div>
+
+        {/* Right Side - Modern Illustration */}
+        <div className="hidden lg:flex flex-1 w-full lg:w-auto items-center justify-center lg:justify-end lg:pr-4">
+          {/* Image without card container */}
+          <img
+            src="/login-illustration.png"
+            alt="Digital Learning Platform"
+            className="w-full h-full object-contain max-w-md"
+          />
+        </div>
       </div>
     </div>
   )

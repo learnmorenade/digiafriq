@@ -20,7 +20,6 @@ import {
   Target,
   Users,
   Mail,
-  GraduationCap,
   Briefcase,
   Loader2
 } from 'lucide-react'
@@ -29,6 +28,7 @@ import { Input } from '@/components/ui/input'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useAuth } from '@/lib/supabase/auth'
+import { useCurrency, CURRENCY_RATES } from '@/contexts/CurrencyContext'
 
 interface SidebarItem {
   title: string
@@ -47,11 +47,20 @@ const AffiliateDashboardLayout = ({ children, title = "Dashboard" }: AffiliateDa
   const [expandedMenus, setExpandedMenus] = useState<string[]>(['Dashboard'])
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false)
   const [switchingRole, setSwitchingRole] = useState(false)
+  const [userAvatar, setUserAvatar] = useState('')
+  const { selectedCurrency, setSelectedCurrency } = useCurrency()
   const pathname = usePathname()
   const router = useRouter()
   const mobileDropdownRef = useRef<HTMLDivElement>(null)
   const desktopDropdownRef = useRef<HTMLDivElement>(null)
   const { user, profile, signOut, refreshProfile } = useAuth()
+
+  // Generate a random avatar for the user
+  useEffect(() => {
+    const avatarSeed = profile?.id || user?.id || user?.email || Math.random().toString()
+    const avatarUrl = `https://picsum.photos/seed/${avatarSeed}/200/200.jpg`
+    setUserAvatar(avatarUrl)
+  }, [profile?.id, user?.id, user?.email])
 
   // Get user's first name from profile
   const getFirstName = () => {
@@ -171,9 +180,8 @@ const AffiliateDashboardLayout = ({ children, title = "Dashboard" }: AffiliateDa
   const availableRoles = (profile as any)?.available_roles || [profile?.role]
   // Force active role to 'affiliate' since we're in affiliate dashboard
   const activeRole = 'affiliate'
-  const hasLearnerRole = availableRoles.includes('learner')
 
-  const handleRoleSwitch = async (role: 'learner' | 'affiliate') => {
+  const handleRoleSwitch = async (role: 'affiliate') => {
     if (role === activeRole || switchingRole) return
 
     // If user doesn't have the role, redirect to affiliate dashboard
@@ -239,23 +247,6 @@ const AffiliateDashboardLayout = ({ children, title = "Dashboard" }: AffiliateDa
         <div className="px-3 pt-4 pb-3 border-b border-gray-200">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-1">Switch Role</p>
           <div className="space-y-2">
-            <button
-              onClick={() => handleRoleSwitch('learner')}
-              disabled={switchingRole || activeRole === 'learner'}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-                activeRole === 'learner'
-                  ? 'bg-white border-2 border-[#ed874a] text-[#ed874a] shadow-sm'
-                  : hasLearnerRole
-                  ? 'bg-white border border-gray-200 text-gray-700 hover:border-gray-300 hover:shadow-sm'
-                  : 'bg-gray-50 text-gray-400 border border-dashed border-gray-300 hover:border-[#ed874a]'
-              } ${switchingRole ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-              <GraduationCap className="w-4 h-4" />
-              <span className="flex-1 text-left">E-Learning</span>
-              {activeRole === 'learner' && <div className="w-2 h-2 rounded-full bg-[#ed874a]"></div>}
-              {switchingRole && activeRole !== 'learner' && <Loader2 className="w-4 h-4 animate-spin" />}
-            </button>
-
             <button
               onClick={() => handleRoleSwitch('affiliate')}
               disabled={switchingRole || activeRole === 'affiliate'}
@@ -337,10 +328,17 @@ const AffiliateDashboardLayout = ({ children, title = "Dashboard" }: AffiliateDa
 
             {/* Mobile: Optimized compact layout */}
             <div className="lg:hidden flex items-center justify-end w-full gap-2">
-              <select className="bg-gray-50 border border-gray-200 rounded-md px-2 py-1 text-xs min-w-[60px]">
+              <select 
+                value={selectedCurrency}
+                onChange={(e) => setSelectedCurrency(e.target.value as any)}
+                className="bg-gray-50 border border-gray-200 rounded-md px-2 py-1 text-xs min-w-[60px]"
+              >
                 <option value="USD">USD</option>
                 <option value="GHS">GHS</option>
                 <option value="NGN">NGN</option>
+                <option value="KES">KES</option>
+                <option value="ZAR">ZAR</option>
+                <option value="XOF">XOF</option>
                 <option value="XAF">XAF</option>
               </select>
 
@@ -354,8 +352,20 @@ const AffiliateDashboardLayout = ({ children, title = "Dashboard" }: AffiliateDa
                   className="flex items-center space-x-1.5 min-w-0 flex-1 justify-end cursor-pointer"
                   onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
                 >
-                  <div className="w-6 h-6 bg-orange-500 rounded-full flex items-center justify-center flex-shrink-0">
-                    <span className="text-white text-xs font-medium">{getInitials()}</span>
+                  <div className="w-6 h-6 rounded-full overflow-hidden border border-gray-200 flex-shrink-0">
+                    {userAvatar ? (
+                      <Image
+                        src={userAvatar}
+                        alt="Profile Avatar"
+                        width={24}
+                        height={24}
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-orange-500 flex items-center justify-center">
+                        <span className="text-white text-xs font-medium">{getInitials()}</span>
+                      </div>
+                    )}
                   </div>
                   <span className="text-xs font-medium truncate max-w-[65px]">{getFirstName()}</span>
                   <ChevronDown className="w-3 h-3 text-gray-400 flex-shrink-0" />
@@ -400,10 +410,17 @@ const AffiliateDashboardLayout = ({ children, title = "Dashboard" }: AffiliateDa
 
           {/* Desktop: Horizontal layout */}
           <div className="hidden lg:flex items-center justify-end space-x-4 w-full">
-            <select className="bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm min-w-[80px]">
+            <select 
+              value={selectedCurrency}
+              onChange={(e) => setSelectedCurrency(e.target.value as any)}
+              className="bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm min-w-[80px]"
+            >
               <option value="USD">USD</option>
               <option value="GHS">GHS</option>
               <option value="NGN">NGN</option>
+              <option value="KES">KES</option>
+              <option value="ZAR">ZAR</option>
+              <option value="XOF">XOF</option>
               <option value="XAF">XAF</option>
             </select>
 
@@ -416,8 +433,20 @@ const AffiliateDashboardLayout = ({ children, title = "Dashboard" }: AffiliateDa
                 className="flex items-center space-x-2 cursor-pointer"
                 onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
               >
-                <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-medium">{getInitials()}</span>
+                <div className="w-8 h-8 rounded-full overflow-hidden border border-gray-200">
+                  {userAvatar ? (
+                    <Image
+                      src={userAvatar}
+                      alt="Profile Avatar"
+                      width={32}
+                      height={32}
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-orange-500 flex items-center justify-center">
+                      <span className="text-white text-sm font-medium">{getInitials()}</span>
+                    </div>
+                  )}
                 </div>
                 <span className="text-sm font-medium">{getFirstName()}</span>
                 <ChevronDown className="w-4 h-4 text-gray-400" />

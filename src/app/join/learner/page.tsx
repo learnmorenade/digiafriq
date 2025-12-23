@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -31,7 +31,7 @@ interface MembershipPackage {
   is_active: boolean
 }
 
-export default function LearnerSalesPage() {
+function LearnerSalesPageContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const referralCode = searchParams.get('ref')
@@ -80,10 +80,10 @@ export default function LearnerSalesPage() {
         const { data: profile } = await supabase
           .from('profiles')
           .select('full_name')
-          .eq('id', affiliateProfile.id)
+          .eq('id', (affiliateProfile as any).id)
           .single()
 
-        if (profile?.full_name) {
+        if (profile && 'full_name' in profile && profile.full_name) {
           setReferrerName(profile.full_name.split(' ')[0]) // First name only
         }
       }
@@ -395,5 +395,17 @@ export default function LearnerSalesPage() {
         </div>
       </footer>
     </div>
+  )
+}
+
+export default function LearnerSalesPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-black">
+        <Loader2 className="w-8 h-8 animate-spin text-yellow-400" />
+      </div>
+    }>
+      <LearnerSalesPageContent />
+    </Suspense>
   )
 }

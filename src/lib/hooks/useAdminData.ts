@@ -75,7 +75,11 @@ export const useAdminData = (): AdminData => {
         // Process payments
         const payments = paymentsResult.data || []
         const completedPayments = payments.filter((p: Payment) => p.status === 'completed')
-        const totalRevenue = completedPayments.reduce((sum: number, p: Payment) => sum + p.amount, 0)
+        const totalRevenue = completedPayments.reduce((sum: number, p: Payment) => {
+          // Use base_currency_amount if available (USD), otherwise fallback to amount with conversion
+          const usdAmount = (p as any).base_currency_amount || (p.currency === 'USD' ? p.amount : p.amount / 10) // Approximate conversion
+          return sum + usdAmount
+        }, 0)
 
         // Process courses
         const courses = coursesResult.data || []

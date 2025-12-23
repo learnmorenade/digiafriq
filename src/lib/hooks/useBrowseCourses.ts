@@ -21,6 +21,16 @@ interface Course {
   tags: string[]
   created_at: string
   updated_at: string
+  modules?: Array<{
+    id: string
+    title: string
+    description?: string
+    lessons?: Array<{
+      id: string
+      title: string
+      duration?: string
+    }>
+  }>
 }
 
 interface EnrolledCourse {
@@ -87,8 +97,12 @@ export const useBrowseCourses = (): BrowseCoursesData => {
               created_at, updated_at,
               modules (
                 id,
+                title,
+                description,
                 lessons (
-                  id
+                  id,
+                  title,
+                  duration
                 )
               )
             `)
@@ -99,11 +113,11 @@ export const useBrowseCourses = (): BrowseCoursesData => {
               if (result.data) {
                 result.data = result.data.map((course: any) => {
                   const lessonCount = course.modules?.reduce((sum: number, mod: any) => 
-                    sum + (mod.lessons?.length || 0), 0) || 0
+                    sum + (mod.lessons?.length || 0), 0) as number || 0
                   return {
                     ...course,
-                    total_lessons: lessonCount > 0 ? lessonCount : course.total_lessons,
-                    modules: undefined // Remove modules from response to keep it clean
+                    total_lessons: lessonCount > 0 ? lessonCount : course.total_lessons
+                    // Keep modules data for CoursePreviewModal
                   }
                 })
               }

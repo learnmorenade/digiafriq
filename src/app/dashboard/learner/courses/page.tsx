@@ -197,7 +197,7 @@ const MyCoursesPage = () => {
                   {course.duration}
                 </div>
                 <div className="flex items-center">
-                  <Users className="w-3 h-3 mr-1" />
+                  <BookOpen className="w-3 h-3 mr-1" />
                   {course.completedLessons}/{course.totalLessons}
                 </div>
                 <div className="flex items-center">

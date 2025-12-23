@@ -18,6 +18,7 @@ import { useReferralCode, useReferralStats, useCommissions } from '@/hooks/useRe
 import { toast } from 'sonner'
 import { getUserWithdrawals, Withdrawal } from '@/lib/withdrawals'
 import Link from 'next/link'
+import { useCurrency, CURRENCY_RATES } from '@/contexts/CurrencyContext'
 
 const AffiliateDashboard = () => {
   const { stats: affiliateStats, recentCommissions, recentPayouts, affiliateProfile, loading: affiliateLoading, error } = useAffiliateData()
@@ -25,6 +26,7 @@ const AffiliateDashboard = () => {
   const { stats: referralStats, loading: referralStatsLoading } = useReferralStats()
   const { loading: commissionsLoading, getTotalEarnings, getAvailableEarnings } = useCommissions()
   const { referralCode, loading: referralCodeLoading, generateUrls } = useReferralCode()
+  const { selectedCurrency, formatAmount, currencyLoading } = useCurrency()
 
   const urls = generateUrls()
 
@@ -35,7 +37,7 @@ const AffiliateDashboard = () => {
   const totalMembershipSales = affiliateStats.totalSales
   const totalDcsSales = affiliateStats.totalDcsSales
 
-  const loading = affiliateLoading || referralStatsLoading || commissionsLoading || referralCodeLoading
+  const loading = affiliateLoading || referralStatsLoading || commissionsLoading || referralCodeLoading || currencyLoading
 
   // Pending withdrawals state
   const [pendingWithdrawals, setPendingWithdrawals] = useState<Withdrawal[]>([])
@@ -87,7 +89,7 @@ const AffiliateDashboard = () => {
   const statsCards = [
     {
       title: "Current Balance",
-      value: loading ? "..." : `$${currentBalanceValue.toFixed(2)}`,
+      value: loading ? "..." : formatAmount(currentBalanceValue),
       icon: DollarSign,
       color: "text-green-600",
       bgColor: "bg-green-50",
@@ -95,7 +97,7 @@ const AffiliateDashboard = () => {
     },
     {
       title: "Total Earnings", 
-      value: loading ? "..." : `$${totalEarnings.toFixed(2)}`,
+      value: loading ? "..." : formatAmount(totalEarnings),
       icon: TrendingUp,
       color: "text-blue-600",
       bgColor: "bg-blue-50", 
@@ -167,9 +169,9 @@ const AffiliateDashboard = () => {
           {!loading && (
             <div className="text-right">
               <p className="text-base sm:text-lg font-bold text-gray-900">
-                ${currentBalanceValue.toFixed(2)}
+                {formatAmount(currentBalanceValue)}
               </p>
-              <p className="text-xs text-gray-500">Balance</p>
+              <p className="text-xs text-gray-500">Balance ({CURRENCY_RATES[selectedCurrency].name})</p>
             </div>
           )}
         </div>
@@ -236,7 +238,7 @@ const AffiliateDashboard = () => {
               <div>
                 <h3 className="font-semibold text-gray-900">Pending Withdrawals</h3>
                 <p className="text-sm text-yellow-600">
-                  <span className="font-medium">${pendingAmount.toFixed(2)}</span> awaiting review
+                  <span className="font-medium">{formatAmount(pendingAmount)}</span> awaiting review
                 </p>
               </div>
             </div>
@@ -316,7 +318,7 @@ const AffiliateDashboard = () => {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-lg font-semibold flex items-center">
-              <Activity className="w-5 h-5 mr-2 text-[#ed874a]" />
+              <Activity className="w-5 h-5 mr-2 text-gray-600" />
               Recent Activities
             </CardTitle>
           </CardHeader>
@@ -374,7 +376,7 @@ const AffiliateDashboard = () => {
               if (activities.length === 0) {
                 return (
                   <div className="text-center py-8 text-gray-500">
-                    <Activity className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                    <Activity className="w-12 h-12 mx-auto mb-3 opacity-50 text-gray-400" />
                     <p className="text-sm">No recent activities</p>
                     <p className="text-xs mt-1">Your sales and withdrawal activities will appear here</p>
                   </div>
@@ -392,16 +394,16 @@ const AffiliateDashboard = () => {
                     const isWithdrawal = activity.type === 'withdrawal';
 
                     // Determine colors and icons based on activity type
-                    const bgColor = isDcsSale ? 'bg-purple-50 hover:bg-purple-100' : 
-                                   isLearnerSale ? 'bg-blue-50 hover:bg-blue-100' : 
-                                   'bg-orange-50 hover:bg-orange-100';
-                    const iconBg = isDcsSale ? 'bg-purple-100' : 
-                                  isLearnerSale ? 'bg-blue-100' : 
-                                  'bg-orange-100';
-                    const iconColor = isDcsSale ? 'text-purple-600' : 
-                                     isLearnerSale ? 'text-blue-600' : 
-                                     'text-orange-600';
-                    const amountColor = isWithdrawal ? 'text-orange-600' : 'text-green-600';
+                    const bgColor = isDcsSale ? 'bg-gray-50 hover:bg-gray-100' : 
+                                   isLearnerSale ? 'bg-gray-50 hover:bg-gray-100' : 
+                                   'bg-gray-50 hover:bg-gray-100';
+                    const iconBg = isDcsSale ? 'bg-gray-200' : 
+                                  isLearnerSale ? 'bg-gray-200' : 
+                                  'bg-gray-200';
+                    const iconColor = isDcsSale ? 'text-gray-600' : 
+                                     isLearnerSale ? 'text-gray-600' : 
+                                     'text-gray-600';
+                    const amountColor = isWithdrawal ? 'text-gray-700' : 'text-gray-800';
                     const amountPrefix = isWithdrawal ? '-' : '+';
 
                     const activityLabel = isDcsSale ? 'DCS Sale' : 
@@ -448,7 +450,7 @@ const AffiliateDashboard = () => {
                         </div>
                         <div className="text-right">
                           <p className={`text-sm font-semibold ${amountColor}`}>
-                            {amountPrefix}${activity.amount.toFixed(2)}
+                            {amountPrefix}{formatAmount(activity.amount)}
                           </p>
                         </div>
                       </div>

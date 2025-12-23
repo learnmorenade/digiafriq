@@ -67,19 +67,19 @@ const WithdrawalsPage = () => {
 
   const paymentMethods = [
     {
-      id: 'bank',
-      name: 'Bank Transfer',
-      description: 'Direct transfer to your bank account',
-      fee: '0.00 USD',
-      processingTime: '3-5 business days',
-      icon: CreditCard
-    },
-    {
       id: 'mobile',
       name: 'Mobile Money',
       description: 'MTN Mobile Money, Vodafone Cash',
-      fee: '1.5%',
-      processingTime: 'Instant',
+      fee: 'No fees',
+      processingTime: 'Within 24 hours',
+      icon: CreditCard
+    },
+    {
+      id: 'bank',
+      name: 'Bank Transfer',
+      description: 'Direct transfer to your bank account',
+      fee: 'No fees',
+      processingTime: '3-5 business days',
       icon: CreditCard
     }
   ]
@@ -733,53 +733,6 @@ const WithdrawalsPage = () => {
           </CardContent>
         </Card>
         </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold">Recent Withdrawals</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {combinedHistory.length === 0 ? (
-              <div className="text-center py-6 text-gray-500">
-                <p className="text-sm">You haven't requested any withdrawals yet.</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {combinedHistory.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex items-center justify-between py-3 border-b last:border-0"
-                  >
-                    <div>
-                      <p className="font-medium text-gray-900">
-                        {item.kind === 'request'
-                          ? `$${item.amountUsd.toFixed(2)} USD`
-                          : formatWithdrawalAmount(item.amountUsd, item.currency)}
-                      </p>
-                      {item.kind === 'request' && item.amountLocal && (
-                        <p className="text-sm text-gray-500">
-                          {formatWithdrawalAmount(item.amountLocal, item.currency)}
-                        </p>
-                      )}
-                      <p className="text-xs text-gray-500 mt-1">
-                        {formatDate(item.created_at)} 
-                        <span className="mx-1">•</span>
-                        Ref: {item.reference}
-                      </p>
-                    </div>
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeClasses(
-                        item.status
-                      )}`}
-                    >
-                      {formatStatusLabel(item.status)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
 
         {/* Withdrawal Information */}
         <Card>

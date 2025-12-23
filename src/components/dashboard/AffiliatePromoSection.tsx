@@ -34,7 +34,7 @@ const AffiliatePromoSection = () => {
           
           {/* Right Content - CTA */}
           <div className="flex-shrink-0">
-            <Link href="/dashboard/learner/affiliate-upgrade">
+            <Link href="/dashboard/affiliate">
               <Button 
                 className="bg-[#ed874a] hover:bg-[#d76f32] text-white px-6 py-2 font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
               >

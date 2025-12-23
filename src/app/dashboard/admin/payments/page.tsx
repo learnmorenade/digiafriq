@@ -207,14 +207,15 @@ const PaymentsManagement = () => {
 
   const handleExport = () => {
     const csvContent = [
-      ['Reference', 'User', 'Email', 'Amount', 'Currency', 'Base Amount (USD)', 'Type', 'Provider', 'Status', 'Date'].join(','),
+      ['Reference', 'User', 'Email', 'Amount', 'Currency', 'Base Amount (USD)', 'Base Currency Amount (USD)', 'Type', 'Provider', 'Status', 'Date'].join(','),
       ...filteredPayments.map(p => [
         p.paystack_reference || 'N/A',
         p.user?.full_name || 'N/A',
         p.user?.email || 'N/A',
         p.amount,
         p.currency,
-        p.base_amount || p.amount,
+        p.base_amount || 'N/A',
+        (p as any).base_currency_amount || 'N/A',
         p.payment_type || 'N/A',
         p.provider || 'N/A',
         p.status,
@@ -294,8 +295,8 @@ const PaymentsManagement = () => {
   // Calculate stats - Use base_amount if available, otherwise convert from local currency
   const completedPayments = payments.filter(p => p.status === 'completed')
   const paymentsRevenueUSD = completedPayments.reduce((sum, p) => {
-    if (p.base_amount) return sum + p.base_amount
-    return sum + toUSD(p.amount, p.currency)
+    const usdAmount = (p as any).base_currency_amount || p.base_amount || toUSD(p.amount, p.currency)
+    return sum + usdAmount
   }, 0)
   
   // Digital Cashflow revenue (calculated separately from user_memberships)
@@ -306,14 +307,14 @@ const PaymentsManagement = () => {
   
   const pendingPayments = payments.filter(p => p.status === 'pending')
   const pendingAmountUSD = pendingPayments.reduce((sum, p) => {
-    if (p.base_amount) return sum + p.base_amount
-    return sum + toUSD(p.amount, p.currency)
+    const usdAmount = (p as any).base_currency_amount || p.base_amount || toUSD(p.amount, p.currency)
+    return sum + usdAmount
   }, 0)
   
   const failedPayments = payments.filter(p => p.status === 'failed')
 
-  // Revenue by type - Use base_amount if available, otherwise convert
-  const getAmountUSD = (p: Payment) => p.base_amount || toUSD(p.amount, p.currency)
+  // Revenue by type - Use base_currency_amount if available, then base_amount, otherwise convert
+  const getAmountUSD = (p: Payment) => (p as any).base_currency_amount || p.base_amount || toUSD(p.amount, p.currency)
   
   const revenueByType: RevenueByType = {
     course: completedPayments.filter(p => p.payment_type === 'course' || (!p.payment_type && p.course_id)).reduce((sum, p) => sum + getAmountUSD(p), 0),

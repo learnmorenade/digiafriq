@@ -4,6 +4,7 @@ import "./fonts.css"
 import "@/styles/nprogress-custom.css"
 import { ConditionalLayout } from "@/components/ConditionalLayout"
 import { AuthProvider } from '@/lib/supabase/auth'
+import { CurrencyProvider } from '@/contexts/CurrencyContext'
 import TopLoader from '@/components/TopLoader'
 import { Toaster } from 'sonner'
 import { PageRefreshHandler } from '@/components/PageRefreshHandler'
@@ -38,8 +39,10 @@ export default function RootLayout({
       <body className="antialiased min-h-screen flex flex-col">
         <TopLoader />
         <AuthProvider>
-          <PageRefreshHandler />
-          <ConditionalLayout>{children}</ConditionalLayout>
+          <CurrencyProvider>
+            <PageRefreshHandler />
+            <ConditionalLayout>{children}</ConditionalLayout>
+          </CurrencyProvider>
         </AuthProvider>
         <Toaster richColors position="top-right" />
       </body>

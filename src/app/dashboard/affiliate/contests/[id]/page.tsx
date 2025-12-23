@@ -15,7 +15,6 @@ import {
   Clock
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
-import ContestLeaderboard from '@/components/contests/ContestLeaderboard'
 
 interface Contest {
   id: string
@@ -238,9 +237,6 @@ export default function ContestDetailsPage() {
             </CardContent>
           </Card>
         )}
-
-        {/* Real-time Leaderboard */}
-        <ContestLeaderboard contestId={contestId} contestStatus={contest.status} />
 
       </div>
   )
