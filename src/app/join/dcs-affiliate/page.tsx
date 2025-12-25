@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { 
@@ -963,5 +963,13 @@ function DCSSalesPageContent() {
 }
 
 export default function DCSSalesPage() {
-  return <DCSSalesPageContent />
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-black">
+        <Loader2 className="w-8 h-8 animate-spin text-yellow-400" />
+      </div>
+    }>
+      <DCSSalesPageContent />
+    </Suspense>
+  )
 }

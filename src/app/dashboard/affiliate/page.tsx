@@ -124,16 +124,13 @@ const AffiliateDashboard = () => {
   // Show skeleton loading instead of full screen loader for better UX
   const SkeletonCard = () => (
     <Card className="relative overflow-hidden">
-      <CardContent className="p-4 lg:p-6">
+      <CardContent className="p-6">
         <div className="flex items-center justify-between">
           <div className="space-y-2">
             <div className="h-4 bg-gray-200 rounded w-24 animate-pulse"></div>
             <div className="h-6 bg-gray-200 rounded w-16 animate-pulse"></div>
           </div>
-          <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-lg bg-gray-200 animate-pulse"></div>
-        </div>
-        <div className="flex justify-end mt-3 lg:mt-4">
-          <div className="h-6 bg-gray-200 rounded w-16 animate-pulse"></div>
+          <div className="w-12 h-12 rounded-lg bg-gray-200 animate-pulse"></div>
         </div>
       </CardContent>
     </Card>
@@ -197,7 +194,7 @@ const AffiliateDashboard = () => {
       </div>
 
       {/* Stats Grid - Mobile optimized */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         {loading ? (
           // Show skeleton cards while loading
           Array.from({ length: 4 }).map((_, index) => (
@@ -206,20 +203,15 @@ const AffiliateDashboard = () => {
         ) : (
           statsCards.map((stat, index) => (
             <Card key={index} className="relative overflow-hidden">
-              <CardContent className="p-4 lg:p-6">
+              <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600 mb-1">{stat.title}</p>
-                    <p className="text-xl lg:text-2xl font-bold text-gray-900">{stat.value}</p>
+                    <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
                   </div>
-                  <div className={`w-10 h-10 lg:w-12 lg:h-12 rounded-lg ${stat.iconBg} flex items-center justify-center`}>
-                    <stat.icon className={`w-5 h-5 lg:w-6 lg:h-6 ${stat.color}`} />
+                  <div className={`w-12 h-12 rounded-lg ${stat.iconBg} flex items-center justify-center`}>
+                    <stat.icon className={`w-6 h-6 ${stat.color}`} />
                   </div>
-                </div>
-                <div className="flex justify-end mt-3 lg:mt-4">
-                  <Button variant="ghost" size="sm" className="text-orange-600 hover:text-[#d76f32] text-xs lg:text-sm">
-                    View All
-                  </Button>
                 </div>
               </CardContent>
             </Card>
