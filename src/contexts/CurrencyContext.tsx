@@ -21,6 +21,7 @@ interface CurrencyContextType {
   setSelectedCurrency: (currency: Currency) => void
   convertAmount: (usdAmount: number) => number
   formatAmount: (usdAmount: number) => string
+  formatAmountWithCurrency: (amount: number, sourceCurrency: string) => string
   currencyLoading: boolean
 }
 
@@ -69,7 +70,7 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
     return Math.round(usdAmount * CURRENCY_RATES[selectedCurrency].rate)
   }
 
-  // Format amount with currency symbol
+  // Format amount with currency symbol (assumes USD input)
   const formatAmount = (usdAmount: number): string => {
     const convertedAmount = convertAmount(usdAmount)
     const symbol = CURRENCY_RATES[selectedCurrency].symbol
@@ -82,6 +83,29 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
     } else {
       return `${symbol}${convertedAmount.toLocaleString()}`
     }
+  }
+
+  // Format amount with source currency conversion
+  const formatAmountWithCurrency = (amount: number, sourceCurrency: string): string => {
+    const sourceKey = sourceCurrency.toUpperCase() as Currency
+    
+    // If source currency is the same as selected currency, no conversion needed
+    if (sourceKey === selectedCurrency) {
+      const symbol = CURRENCY_RATES[selectedCurrency].symbol
+      return `${symbol}${amount.toLocaleString()}`
+    }
+    
+    // Convert from source currency to USD first, then to selected currency
+    let usdAmount: number
+    if (sourceKey in CURRENCY_RATES) {
+      usdAmount = amount / CURRENCY_RATES[sourceKey].rate
+    } else {
+      // If source currency not recognized, assume it's USD
+      usdAmount = amount
+    }
+    
+    // Then convert USD to selected currency
+    return formatAmount(usdAmount)
   }
 
   // Set currency and persist to localStorage
@@ -135,6 +159,7 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
     setSelectedCurrency,
     convertAmount,
     formatAmount,
+    formatAmountWithCurrency,
     currencyLoading,
   }
 
@@ -153,5 +178,5 @@ export function useCurrency() {
   return context
 }
 
-export { CURRENCY_RATES, Currency }
-export type { CurrencyContextType }
+export { CURRENCY_RATES }
+export type { Currency, CurrencyContextType }

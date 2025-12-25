@@ -160,12 +160,14 @@ async function processReferralCommissions(payment: any, verificationData: any) {
   console.log('🔗 Checking for referral commissions...')
   
   try {
-    // Check if this user was referred
+    // Check if this user was referred (look for both pending and completed referrals)
     const { data: referral, error: referralError } = await supabase
       .from('referrals')
       .select('*')
       .eq('referred_id', payment.user_id)
-      .eq('status', 'pending')
+      .in('status', ['pending', 'completed'])
+      .order('created_at', { ascending: false })
+      .limit(1)
       .single() as any
 
     if (referralError || !referral) {
@@ -192,11 +194,12 @@ async function processReferralCommissions(payment: any, verificationData: any) {
     let commissionType: 'learner_referral' | 'affiliate_referral' = 'learner_referral'
     let notes = `Commission for ${membershipPackage.name} purchase`
 
-    // Determine commission type based on referral type and membership type
-    if (referral.referral_type === 'affiliate' && membershipPackage.member_type === 'affiliate') {
+    // Determine commission type based on link type and membership type
+    // Note: referrals table uses 'link_type' not 'referral_type'
+    if (referral.link_type === 'dcs' && membershipPackage.member_type === 'affiliate') {
       commissionType = 'affiliate_referral'
       notes = `Commission for affiliate referral purchasing ${membershipPackage.name}`
-    } else if (referral.referral_type === 'learner' && membershipPackage.member_type === 'learner') {
+    } else if ((referral.link_type === 'learner' || referral.link_type === 'dcs') && membershipPackage.member_type === 'learner') {
       commissionType = 'learner_referral'
       notes = `Commission for learner referral purchasing ${membershipPackage.name}`
     } else {

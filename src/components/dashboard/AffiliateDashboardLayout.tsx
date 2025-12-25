@@ -21,14 +21,16 @@ import {
   Users,
   Mail,
   Briefcase,
-  Loader2
+  Loader2,
+  GraduationCap
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useAuth } from '@/lib/supabase/auth'
-import { useCurrency, CURRENCY_RATES } from '@/contexts/CurrencyContext'
+import { useCurrency } from '@/contexts/CurrencyContext'
+import { NotificationBell } from '@/components/notifications/NotificationBell'
 
 interface SidebarItem {
   title: string
@@ -179,15 +181,17 @@ const AffiliateDashboardLayout = ({ children, title = "Dashboard" }: AffiliateDa
   // Get available roles from profile
   const availableRoles = (profile as any)?.available_roles || [profile?.role]
   // Force active role to 'affiliate' since we're in affiliate dashboard
-  const activeRole = 'affiliate'
+  const activeRole: 'affiliate' | 'learner' = 'affiliate'
 
-  const handleRoleSwitch = async (role: 'affiliate') => {
+  const handleRoleSwitch = async (role: 'affiliate' | 'learner') => {
     if (role === activeRole || switchingRole) return
 
-    // If user doesn't have the role, redirect to affiliate dashboard
+    // If user doesn't have the role, redirect appropriately
     if (!availableRoles.includes(role)) {
       if (role === 'affiliate') {
         router.push('/dashboard/affiliate')
+      } else if (role === 'learner') {
+        router.push('/dashboard/learner')
       }
       return
     }
@@ -223,9 +227,9 @@ const AffiliateDashboardLayout = ({ children, title = "Dashboard" }: AffiliateDa
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0`}>
-        <div className="flex items-center justify-between h-16 px-6 border-b">
+      {/* Dark Premium Sidebar */}
+      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg border-r border-gray-200 transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0`}>
+        <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200">
           <div className="flex items-center">
             <Image
               src="/digiafriqlogo.png"
@@ -237,13 +241,13 @@ const AffiliateDashboardLayout = ({ children, title = "Dashboard" }: AffiliateDa
           </div>
           <button
             onClick={() => setSidebarOpen(false)}
-            className="lg:hidden p-2 hover:bg-gray-100 rounded-md"
+            className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
-            <X className="w-6 h-6" />
+            <X className="w-6 h-6 text-gray-600" />
           </button>
         </div>
 
-        {/* Role Switcher Buttons */}
+        {/* Dark Role Switcher Buttons */}
         <div className="px-3 pt-4 pb-3 border-b border-gray-200">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-1">Switch Role</p>
           <div className="space-y-2">
@@ -252,23 +256,42 @@ const AffiliateDashboardLayout = ({ children, title = "Dashboard" }: AffiliateDa
               disabled={switchingRole || activeRole === 'affiliate'}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
                 activeRole === 'affiliate'
-                  ? 'bg-white border-2 border-[#ed874a] text-[#ed874a] shadow-sm'
-                  : 'bg-white border border-gray-200 text-gray-700 hover:border-gray-300 hover:shadow-sm'
+                  ? 'bg-orange-50 border-2 border-orange-200 text-orange-600 shadow-sm'
+                  : 'bg-gray-50 border border-gray-200 text-gray-700 hover:border-orange-200 hover:bg-orange-50'
               } ${switchingRole ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <Briefcase className="w-4 h-4" />
               <span className="flex-1 text-left">Affiliate Dashboard</span>
-              {activeRole === 'affiliate' && <div className="w-2 h-2 rounded-full bg-[#ed874a]"></div>}
+              {activeRole === 'affiliate' && <div className="w-2 h-2 rounded-full bg-orange-500"></div>}
               {switchingRole && activeRole !== 'affiliate' && <Loader2 className="w-4 h-4 animate-spin" />}
+            </button>
+
+            <button
+              onClick={() => handleRoleSwitch('learner')}
+              disabled={switchingRole || activeRole === 'learner'}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                activeRole === 'learner'
+                  ? 'bg-orange-50 border-2 border-orange-200 text-orange-600 shadow-sm'
+                  : 'bg-gray-50 border border-gray-200 text-gray-700 hover:border-orange-200 hover:bg-orange-50'
+              } ${switchingRole ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              <GraduationCap className="w-4 h-4" />
+              <span className="flex-1 text-left">E-Learning</span>
+              {activeRole === 'learner' && <div className="w-2 h-2 rounded-full bg-orange-500"></div>}
+              {switchingRole && activeRole !== 'learner' && <Loader2 className="w-4 h-4 animate-spin" />}
             </button>
           </div>
         </div>
 
-        <nav className="mt-4 px-3 pb-6 h-[calc(100vh-12rem)]">
+        <nav className="mt-4 px-3 pb-6 h-[calc(100vh-12rem)] overflow-y-auto">
           {sidebarItems.map((item, index) => (
             <div key={index} className="mb-2">
               <div
-                className={`flex items-center px-3 py-3 rounded-lg cursor-pointer transition-all duration-200 ${isParentActive(item) ? 'bg-orange-500 text-white shadow-sm' : 'text-gray-700 hover:bg-gray-100'}`}
+                className={`flex items-center px-3 py-3 rounded-xl cursor-pointer transition-all duration-200 ${
+                  isParentActive(item) 
+                    ? 'bg-orange-50 text-orange-600 border border-orange-200 shadow-sm' 
+                    : 'text-gray-700 hover:bg-gray-50 hover:border hover:border-gray-200'
+                }`}
                 onClick={() => {
                   if (item.submenu) {
                     toggleMenu(item.title)
@@ -297,7 +320,11 @@ const AffiliateDashboardLayout = ({ children, title = "Dashboard" }: AffiliateDa
                     <Link
                       key={subIndex}
                       href={subItem.href}
-                      className={`block px-3 py-2 text-sm rounded-lg transition-colors duration-200 ${isActiveRoute(subItem.href) ? 'bg-orange-50 text-orange-600 font-medium' : 'text-gray-600 hover:text-orange-600 hover:bg-gray-50'}`}
+                      className={`block px-3 py-2 text-sm rounded-lg cursor-pointer transition-all duration-200 ${
+                        isActiveRoute(subItem.href) 
+                          ? 'text-orange-700 bg-orange-50 font-medium border border-orange-200' 
+                          : 'text-gray-600 hover:text-orange-700 hover:bg-gray-50'
+                      }`}
                       onClick={() => setSidebarOpen(false)}
                     >
                       {subItem.title}
@@ -310,28 +337,28 @@ const AffiliateDashboardLayout = ({ children, title = "Dashboard" }: AffiliateDa
         </nav>
       </div>
 
-      {/* Main Content - Mobile first responsive */}
+      {/* Dark Main Content - Mobile first responsive */}
       <div className={`flex-1 flex flex-col min-h-screen ${sidebarOpen ? 'lg:ml-64' : ''}`}>
-        {/* Header - Mobile optimized height */}
-        <header className="bg-white shadow-sm border-b h-16 lg:h-16 flex items-center justify-between px-4 lg:px-6 flex-shrink-0">
+        {/* Dark Header - Mobile optimized height */}
+        <header className="bg-white shadow-sm border-b border-gray-200 h-16 lg:h-16 flex items-center justify-between px-4 lg:px-6 flex-shrink-0">
           <div className="flex items-center justify-between w-full lg:min-w-0 lg:flex-1 py-2 lg:py-0">
             <div className="flex items-center min-w-0">
               <button
                 onClick={() => setSidebarOpen(true)}
-                className="lg:hidden p-2 hover:bg-gray-100 rounded-md flex-shrink-0"
+                className="lg:hidden p-2 hover:bg-gray-100 rounded-md flex-shrink-0 transition-colors"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
               </button>
             </div>
 
-            {/* Mobile: Optimized compact layout */}
+            {/* Mobile: Dark optimized compact layout */}
             <div className="lg:hidden flex items-center justify-end w-full gap-2">
               <select 
                 value={selectedCurrency}
                 onChange={(e) => setSelectedCurrency(e.target.value as any)}
-                className="bg-gray-50 border border-gray-200 rounded-md px-2 py-1 text-xs min-w-[60px]"
+                className="bg-white border border-gray-300 rounded-md px-2 py-1 text-xs min-w-[60px] text-gray-700 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20"
               >
                 <option value="USD">USD</option>
                 <option value="GHS">GHS</option>
@@ -342,17 +369,14 @@ const AffiliateDashboardLayout = ({ children, title = "Dashboard" }: AffiliateDa
                 <option value="XAF">XAF</option>
               </select>
 
-              <Button variant="ghost" size="sm" className="p-1.5 hover:bg-gray-100">
-                <Bell className="w-4 h-4" />
-                <span className="sr-only">Notifications</span>
-              </Button>
+              <NotificationBell />
 
               <div className="relative" ref={mobileDropdownRef}>
                 <div 
                   className="flex items-center space-x-1.5 min-w-0 flex-1 justify-end cursor-pointer"
                   onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
                 >
-                  <div className="w-6 h-6 rounded-full overflow-hidden border border-gray-200 flex-shrink-0">
+                  <div className="w-6 h-6 rounded-full overflow-hidden border border-gray-300 flex-shrink-0 shadow-sm">
                     {userAvatar ? (
                       <Image
                         src={userAvatar}
@@ -362,22 +386,22 @@ const AffiliateDashboardLayout = ({ children, title = "Dashboard" }: AffiliateDa
                         className="object-cover"
                       />
                     ) : (
-                      <div className="w-full h-full bg-orange-500 flex items-center justify-center">
+                      <div className="w-full h-full bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center">
                         <span className="text-white text-xs font-medium">{getInitials()}</span>
                       </div>
                     )}
                   </div>
-                  <span className="text-xs font-medium truncate max-w-[65px]">{getFirstName()}</span>
-                  <ChevronDown className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                  <span className="text-xs font-medium truncate max-w-[65px] text-gray-700">{getFirstName()}</span>
+                  <ChevronDown className="w-3 h-3 text-gray-500 flex-shrink-0" />
                 </div>
 
-                {/* Mobile Profile Dropdown */}
+                {/* Mobile Dark Profile Dropdown */}
                 {profileDropdownOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-50">
-                    <div className="py-1">
+                  <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-200 z-50">
+                    <div className="py-2">
                       <Link
                         href="/dashboard/profile"
-                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-700 transition-all duration-200"
                         onClick={() => setProfileDropdownOpen(false)}
                       >
                         <User className="w-4 h-4 mr-3" />
@@ -385,7 +409,7 @@ const AffiliateDashboardLayout = ({ children, title = "Dashboard" }: AffiliateDa
                       </Link>
                       <Link
                         href="/dashboard/affiliate/change-password"
-                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-700 transition-all duration-200"
                         onClick={() => setProfileDropdownOpen(false)}
                       >
                         <Settings className="w-4 h-4 mr-3" />
@@ -396,7 +420,7 @@ const AffiliateDashboardLayout = ({ children, title = "Dashboard" }: AffiliateDa
                           setProfileDropdownOpen(false)
                           handleLogout()
                         }}
-                        className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        className="flex items-center w-full px-4 py-3 text-sm text-gray-700 hover:bg-red-50 hover:text-red-700 transition-all duration-200"
                       >
                         <LogOut className="w-4 h-4 mr-3" />
                         Logout
@@ -408,12 +432,12 @@ const AffiliateDashboardLayout = ({ children, title = "Dashboard" }: AffiliateDa
             </div>
           </div>
 
-          {/* Desktop: Horizontal layout */}
+          {/* Desktop: Dark horizontal layout */}
           <div className="hidden lg:flex items-center justify-end space-x-4 w-full">
             <select 
               value={selectedCurrency}
               onChange={(e) => setSelectedCurrency(e.target.value as any)}
-              className="bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm min-w-[80px]"
+              className="bg-white border border-gray-300 rounded-md px-3 py-2 text-sm min-w-[80px] text-gray-700 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20"
             >
               <option value="USD">USD</option>
               <option value="GHS">GHS</option>
@@ -424,16 +448,14 @@ const AffiliateDashboardLayout = ({ children, title = "Dashboard" }: AffiliateDa
               <option value="XAF">XAF</option>
             </select>
 
-            <Button variant="ghost" size="sm">
-              <Bell className="w-5 h-5" />
-            </Button>
+            <NotificationBell />
 
             <div className="relative" ref={desktopDropdownRef}>
               <div 
                 className="flex items-center space-x-2 cursor-pointer"
                 onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
               >
-                <div className="w-8 h-8 rounded-full overflow-hidden border border-gray-200">
+                <div className="w-8 h-8 rounded-full overflow-hidden border border-gray-300 shadow-sm">
                   {userAvatar ? (
                     <Image
                       src={userAvatar}
@@ -443,22 +465,22 @@ const AffiliateDashboardLayout = ({ children, title = "Dashboard" }: AffiliateDa
                       className="object-cover"
                     />
                   ) : (
-                    <div className="w-full h-full bg-orange-500 flex items-center justify-center">
+                    <div className="w-full h-full bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center">
                       <span className="text-white text-sm font-medium">{getInitials()}</span>
                     </div>
                   )}
                 </div>
-                <span className="text-sm font-medium">{getFirstName()}</span>
-                <ChevronDown className="w-4 h-4 text-gray-400" />
+                <span className="text-sm font-medium text-gray-700">{getFirstName()}</span>
+                <ChevronDown className="w-4 h-4 text-gray-500" />
               </div>
 
               {/* Desktop Profile Dropdown */}
               {profileDropdownOpen && (
-                <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-50">
-                  <div className="py-1">
+                <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-200 z-50">
+                  <div className="py-2">
                     <Link
                       href="/dashboard/profile"
-                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-700 transition-all duration-200"
                       onClick={() => setProfileDropdownOpen(false)}
                     >
                       <User className="w-4 h-4 mr-3" />
@@ -466,7 +488,7 @@ const AffiliateDashboardLayout = ({ children, title = "Dashboard" }: AffiliateDa
                     </Link>
                     <Link
                       href="/dashboard/affiliate/change-password"
-                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-700 transition-all duration-200"
                       onClick={() => setProfileDropdownOpen(false)}
                     >
                       <Settings className="w-4 h-4 mr-3" />
@@ -477,7 +499,7 @@ const AffiliateDashboardLayout = ({ children, title = "Dashboard" }: AffiliateDa
                         setProfileDropdownOpen(false)
                         handleLogout()
                       }}
-                      className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      className="flex items-center w-full px-4 py-3 text-sm text-gray-700 hover:bg-red-50 hover:text-red-700 transition-all duration-200"
                     >
                       <LogOut className="w-4 h-4 mr-3" />
                       Logout
@@ -489,16 +511,16 @@ const AffiliateDashboardLayout = ({ children, title = "Dashboard" }: AffiliateDa
           </div>
         </header>
 
-        {/* Page Content - Mobile optimized */}
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6 min-h-0">
+        {/* Dark Page Content - Mobile optimized */}
+        <main className="flex-1 overflow-y-auto p-4 lg:p-6 min-h-0 bg-gray-50">
           {children}
         </main>
       </div>
 
-      {/* Mobile Sidebar Overlay - Show page content behind */}
+      {/* Dark Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-transparent backdrop-blur-[2px] z-40 lg:hidden"
+          className="fixed inset-0 bg-black/20 z-40 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}

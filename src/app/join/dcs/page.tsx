@@ -107,6 +107,7 @@ function AnimatedSection({ children, variants, className = "" }: {
 function DCSSalesPageContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
+  const referralCode = searchParams.get('ref')
   const [membership, setMembership] = useState<MembershipPackage | null>(null)
   const [loading, setLoading] = useState(true)
   const [referrerName, setReferrerName] = useState<string | null>(null)
@@ -127,8 +128,18 @@ function DCSSalesPageContent() {
     }))
   }
 
-  // Fetch membership data
+  // Fetch membership data and handle referral code
   useEffect(() => {
+    // Store referral code in localStorage for tracking
+    if (referralCode) {
+      localStorage.setItem('referral_code', referralCode)
+      localStorage.setItem('referral_type', 'dcs')
+      fetchReferrerInfo(referralCode)
+      
+      // Track affiliate link click
+      trackAffiliateClick(referralCode, 'dcs')
+    }
+    
     async function fetchMembership() {
       try {
         const { data, error } = await supabase
@@ -151,15 +162,46 @@ function DCSSalesPageContent() {
     }
 
     fetchMembership()
-  }, [])
+  }, [referralCode])
 
-  // Fetch referrer name
-  useEffect(() => {
-    const referrer = searchParams.get('ref')
-    if (referrer) {
-      setReferrerName(referrer)
+  const trackAffiliateClick = async (code: string, linkType: string) => {
+    try {
+      await fetch('/api/affiliate/track-click', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ referral_code: code, link_type: linkType })
+      })
+      console.log('📊 Affiliate click tracked')
+    } catch (error) {
+      console.error('Failed to track affiliate click:', error)
     }
-  }, [searchParams])
+  }
+
+  const fetchReferrerInfo = async (code: string) => {
+    try {
+      // Get referrer info from affiliate_profiles
+      const { data: affiliateProfile } = await supabase
+        .from('affiliate_profiles')
+        .select('id')
+        .eq('referral_code', code)
+        .single()
+
+      if (affiliateProfile) {
+        // Get the referrer's name from profiles
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', (affiliateProfile as any).id)
+          .single()
+
+        if (profile && 'full_name' in profile && profile.full_name) {
+          setReferrerName(profile.full_name.split(' ')[0]) // First name only
+        }
+      }
+    } catch (error) {
+      console.log('Could not fetch referrer info')
+    }
+  }
 
   // Countdown timer
   useEffect(() => {
@@ -184,8 +226,9 @@ function DCSSalesPageContent() {
 
   const handleGetStarted = () => {
     if (membership) {
-      // Navigate to guest checkout with membership ID as URL parameter
-      router.push(`/checkout/guest/${membership.id}`)
+      // Navigate to guest checkout with membership ID and referral parameters
+      const checkoutUrl = `/checkout/guest/${membership.id}?type=dcs${referralCode ? `&ref=${referralCode}` : ''}`
+      router.push(checkoutUrl)
     } else {
       // Fallback to membership selection
       router.push('/dashboard/learner/membership')

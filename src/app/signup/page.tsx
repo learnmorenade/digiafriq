@@ -216,7 +216,7 @@ const SignupPage = () => {
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-amber-50">
       <div className="flex flex-col lg:flex-row min-h-screen">
         {/* Left Section: Form */}
-        <div className="w-full lg:w-1/2 flex items-center justify-center py-8 px-4 order-2 lg:order-1 overflow-y-auto">
+        <div className="w-full flex items-center justify-center py-8 px-4 order-1 lg:order-1 overflow-y-auto lg:w-1/2">
           <div className="max-w-xl w-full my-8">
             {/* Header */}
             <div className="text-center mb-8">
@@ -404,7 +404,7 @@ const SignupPage = () => {
         </div>
 
         {/* Right Section: Illustration */}
-        <div className="w-full lg:w-1/2 bg-gradient-to-br from-[#ed874a] to-[#d76f32] flex items-center justify-center py-12 px-8 order-1 lg:order-2 overflow-y-auto">
+        <div className="hidden lg:block w-full lg:w-1/2 bg-gradient-to-br from-[#ed874a] to-[#d76f32] flex items-center justify-center py-12 px-8 order-1 lg:order-2 overflow-y-auto">
           <div className="max-w-lg w-full text-center text-white my-8">
             <h2 className="text-3xl font-bold mb-4">
               Join 1,500,000+ learners today!

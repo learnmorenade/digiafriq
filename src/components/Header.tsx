@@ -9,11 +9,10 @@ import { useAuth } from "@/lib/supabase/auth"
 import { useRouter } from "next/navigation"
 
 const navigation = [
-  { name: "How it Works", href: "/how-it-works" },
-  { name: "Pricing", href: "/pricing" },
-  { name: "FAQ", href: "/faq" },
-  { name: "Blog", href: "/blog" },
-  { name: "Affiliate Network", href: "/affiliate" },
+  { name: "Pricing", href: "/#pricing" },
+  { name: "FAQ", href: "/#faq" },
+  { name: "Blog", href: "/#blog" },
+  { name: "Affiliate Network", href: "/join/dcs-affiliate" },
   { name: "Contact Us", href: "/contact" },
 ]
 

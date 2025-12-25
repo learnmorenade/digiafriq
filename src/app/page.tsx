@@ -3,8 +3,8 @@ import Squares from "../components/Squares"
 import { motion } from "framer-motion"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { TrendingUp, Monitor, Globe, Smartphone, Star, CheckCircle, ArrowRight, Users, Award, MapPin, Clock, BookOpen, Zap, Shield, Target, ChevronDown, HelpCircle } from "lucide-react"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { TrendingUp, Monitor, Globe, Smartphone, Star, CheckCircle, ArrowRight, Users, Award, MapPin, Clock, BookOpen, Zap, Shield, Target, ChevronDown, HelpCircle, DollarSign, Check } from "lucide-react"
 
 const courses = [
   { title: "Digital Marketing Mastery", description: "SEO, social media, content strategy", icon: TrendingUp, duration: "8 weeks", level: "Beginner–Advanced", image: "/courses/digital-marketing.jpg" },
@@ -43,150 +43,298 @@ const stats = [
 
 export default function Home() {
   return (
-    <div className="min-h-screen">
-      {/* Hero Section */}
-      <section className="relative bg-white overflow-hidden h-auto sm:h-[90vh] flex items-center justify-center py-16 sm:py-0">
-        <Squares
-          speed={0.5}
-          squareSize={40}
-          direction="diagonal"
-          borderColor="#e5e7eb"
-          hoverFillColor="#ed874a"
-          className="z-0"
+    <div className="min-h-screen relative bg-gradient-to-br from-[#fef3e8] via-white to-[#fef3e8] overflow-hidden">
+      {/* Animated Background Elements - Applied to entire page */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <motion.div
+          animate={{
+            scale: [1, 1.2, 1],
+            rotate: [0, 90, 0],
+            opacity: [0.3, 0.5, 0.3]
+          }}
+          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+          className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-[#ed874a]/20 to-[#d76f32]/20 rounded-full blur-3xl"
         />
-
+        <motion.div
+          animate={{
+            scale: [1, 1.3, 1],
+            rotate: [0, -90, 0],
+            opacity: [0.2, 0.4, 0.2]
+          }}
+          transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+          className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-tr from-[#ed874a]/20 to-[#d76f32]/20 rounded-full blur-3xl"
+        />
+        <motion.div
+          animate={{
+            y: [0, -30, 0],
+            opacity: [0.1, 0.3, 0.1]
+          }}
+          transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-r from-[#ed874a]/10 to-[#d76f32]/10 rounded-full blur-3xl"
+        />
+      </div>
+      {/* Hero Section */}
+      <section className="relative min-h-[95vh] flex items-center py-12 lg:py-0 z-10">
         {/* Hero Content */}
-        <div className="mx-auto max-w-3xl px-6 text-center relative z-10">
-          <p className="uppercase text-sm font-semibold tracking-wide text-[#ed874a] mb-2 sm:mb-3">
-            Build Skills. Apply Knowledge. Grow Your Potential.
-          </p>
-          <h1 className="text-3xl sm:text-5xl font-bold leading-snug text-gray-900 mb-2 sm:mb-4">
-            The best way to learn <br className="hidden sm:block" /> digital skills and grow
-          </h1>
-          <p className="text-lg text-gray-600 mb-4 sm:mb-6">
-            DigiAfriq helps you master in-demand digital skills, build confidence in applying them, and, through our affiliate program, explore ways to earn from your knowledge
-          </p>
-          <Button
-            size="lg"
-            className="bg-[#ed874a] text-white hover:bg-[#d76f32] px-6 py-3 rounded-md font-semibold"
-            asChild
-          >
-            <Link href="/signup">Join DigiAfriq Today</Link>
-          </Button>
+        <div className="mx-auto max-w-7xl px-6 lg:px-8 w-full relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+            {/* Left: Text Content */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
+              className="space-y-8"
+            >
+              {/* Main Heading with Gradient */}
+              <motion.h1
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.3 }}
+                className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-[1.1] tracking-tight"
+              >
+                <span className="text-gray-900">Build Skills That</span>
+                <br />
+                <span className="bg-gradient-to-r from-[#ed874a] via-[#d76f32] to-[#ed874a] bg-clip-text text-transparent">
+                  Create Income
+                </span>
+                <br />
+              </motion.h1>
+
+              {/* Description with Animation */}
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.5 }}
+                className="text-base sm:text-lg text-gray-600 leading-relaxed max-w-xl"
+              >
+                Master in-demand digital skills and unlock an opportunity to earn through Digiafriq's affiliate system.
+              </motion.p>
+
+              {/* CTA Buttons with Enhanced Hover */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.7 }}
+                className="flex flex-col sm:flex-row gap-4 pt-4"
+              >
+                <Button
+                  size="lg"
+                  className="group relative bg-gradient-to-r from-[#ed874a] to-[#d76f32] hover:from-[#d76f32] hover:to-[#ed874a] text-white px-8 py-6 rounded-xl font-semibold text-base shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 overflow-hidden"
+                  asChild
+                >
+                  <Link href="#pricing" className="relative z-10 flex items-center justify-center">
+                    <span>Start Learning Now</span>
+                    <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                    <motion.div
+                      className="absolute inset-0 bg-gradient-to-r from-[#d76f32] to-[#d76f32]"
+                      initial={{ x: "-100%" }}
+                      whileHover={{ x: 0 }}
+                      transition={{ duration: 0.3 }}
+                    />
+                  </Link>
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="group border-2 border-[#ed874a] text-[#ed874a] hover:bg-[#fef3e8] px-8 py-6 rounded-xl font-semibold text-base transition-all duration-300 hover:border-[#d76f32] hover:shadow-lg"
+                  asChild
+                >
+                  <Link href="/join/dcs-affiliate" className="flex items-center justify-center">
+                    <span>Join as affiliate</span>
+                    <Users className="w-5 h-5 ml-2 group-hover:rotate-12 transition-transform" />
+                  </Link>
+                </Button>
+              </motion.div>
+            </motion.div>
+
+            {/* Right: Brain Image with Floating Animation */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.8, delay: 0.4 }}
+              className="relative flex justify-center lg:justify-end"
+            >
+              <motion.div
+                animate={{
+                  y: [0, -20, 0],
+                }}
+                transition={{
+                  duration: 6,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+                className="relative w-full max-w-2xl"
+              >
+                {/* Glow Effect Behind Image */}
+                <div className="absolute inset-0 bg-gradient-to-r from-[#ed874a]/20 to-[#d76f32]/20 rounded-full blur-3xl scale-110" />
+                
+                {/* Main Image */}
+                <motion.img
+                  whileHover={{ scale: 1.05 }}
+                  transition={{ duration: 0.3 }}
+                  src="/herosectionimage.png" 
+                  alt="Geometric brain illustration representing digital learning"
+                  className="relative w-full h-auto drop-shadow-2xl"
+                />
+                
+                {/* Floating Decorative Elements */}
+                <motion.div
+                  animate={{
+                    y: [0, -15, 0],
+                    rotate: [0, 5, 0]
+                  }}
+                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                  className="absolute -top-8 -right-8 w-20 h-20 bg-gradient-to-br from-[#ed874a] to-[#d76f32] rounded-2xl opacity-20 blur-xl"
+                />
+                <motion.div
+                  animate={{
+                    y: [0, 15, 0],
+                    rotate: [0, -5, 0]
+                  }}
+                  transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                  className="absolute -bottom-8 -left-8 w-24 h-24 bg-gradient-to-tr from-[#ed874a] to-[#d76f32] rounded-full opacity-20 blur-xl"
+                />
+              </motion.div>
+            </motion.div>
+          </div>
         </div>
+
+        {/* Scroll Indicator */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1, delay: 1.5 }}
+          className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20"
+        >
+          <motion.div
+            animate={{ y: [0, 10, 0] }}
+            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+            className="flex flex-col items-center gap-2 cursor-pointer group"
+          >
+            <span className="text-xs font-medium text-gray-500 group-hover:text-[#ed874a] transition-colors">Scroll to explore</span>
+            <ChevronDown className="w-5 h-5 text-gray-400 group-hover:text-[#ed874a] transition-colors" />
+          </motion.div>
+        </motion.div>
       </section>
 
       {/* Stats Section */}
-      <section className="py-20 bg-gray-50 relative overflow-hidden">
+      <section className="py-16 relative z-10">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl mb-4">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold text-gray-900 mb-3">
               Join Our Growing Community
             </h2>
-            <p className="text-lg text-gray-600">
-              Unlock Your Earning Potential Today
+            <p className="text-base text-gray-600 max-w-2xl mx-auto">
+              Thousands of learners across Africa are already building their digital skills and earning through our platform.
             </p>
           </div>
           
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            {/* Stats Column */}
-            <div className="space-y-8">
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.6 }}
-                className="border-l-4 border-[#ed874a] pl-6"
-              >
-                <div className="text-4xl font-bold text-[#ed874a] mb-2">15,000+</div>
-                <div className="text-lg text-gray-700 font-medium">Active Learners</div>
-                <div className="w-24 h-1 bg-gray-200 mt-2"></div>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.6, delay: 0.1 }}
-                className="border-l-4 border-[#ed874a] pl-6"
-              >
-                <div className="text-4xl font-bold text-[#ed874a] mb-2">50+</div>
-                <div className="text-lg text-gray-700 font-medium">High Quality Courses</div>
-                <div className="w-24 h-1 bg-gray-200 mt-2"></div>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.6, delay: 0.2 }}
-                className="border-l-4 border-[#ed874a] pl-6"
-              >
-                <div className="text-4xl font-bold text-[#ed874a] mb-2">20+</div>
-                <div className="text-lg text-gray-700 font-medium">African Countries</div>
-                <div className="w-24 h-1 bg-gray-200 mt-2"></div>
-              </motion.div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+            {/* Stats Cards */}
+            <div className="text-center p-6 bg-transparent rounded-lg border border-gray-200">
+              <div className="text-4xl font-bold text-gray-900 mb-2">15,000+</div>
+              <div className="text-sm text-gray-600 uppercase tracking-wide">Active Learners</div>
             </div>
 
-            {/* World Map Column */}
-<div className="relative">
-  <motion.div
-    initial={{ opacity: 0, scale: 0.9 }}
-    whileInView={{ opacity: 1, scale: 1 }}
-    transition={{ duration: 0.8 }}
-    className="relative"
-  >
-    {/* World Map Image */}
-    <img 
-      src="/world-map-with-pins.png" 
-      alt="DigiAfriq Global Reach - World Map with Location Pins"
-      className="w-full max-w-6xl h-auto mx-auto scale-110" 
-    />
-  </motion.div>
-</div>
+            <div className="text-center p-6 bg-transparent rounded-lg border border-gray-200">
+              <div className="text-4xl font-bold text-gray-900 mb-2">1000+</div>
+              <div className="text-sm text-gray-600 uppercase tracking-wide">Affiliates</div>
+            </div>
 
+            <div className="text-center p-6 bg-transparent rounded-lg border border-gray-200">
+              <div className="text-4xl font-bold text-gray-900 mb-2">20+</div>
+              <div className="text-sm text-gray-600 uppercase tracking-wide">African Countries</div>
+            </div>
+          </div>
+
+          {/* World Map */}
+          <div className="max-w-4xl mx-auto">
+            <img 
+              src="/world-map-with-pins.png" 
+              alt="DigiAfriq Global Reach - World Map with Location Pins"
+              className="w-full h-auto" 
+            />
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section className="py-20 bg-white">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl mb-4">
+      <section className="py-16 relative z-10">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-12 text-center">
+            <h2 className="text-3xl font-bold text-gray-900 mb-3">
               Why Choose DigiAfriq?
             </h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              We&apos;re more than just a learning platform. We&apos;re your partner in digital transformation across Africa.
+            <p className="text-base text-gray-600 max-w-3xl mx-auto">
+              We provide practical digital skills training designed specifically for the African market, with flexible learning options and real earning opportunities.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {features.map((feature, index) => (
-              <motion.div
-                key={feature.title}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-              >
-                <Card className="h-full border-0 shadow-md hover:shadow-lg transition-shadow duration-300">
-                  <CardHeader className="text-center pb-4">
-                    <div className="w-16 h-16 bg-[#ed874a]/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <feature.icon className="w-8 h-8 text-[#ed874a]" />
-                    </div>
-                    <CardTitle className="text-xl font-semibold">{feature.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="text-center">
-                    <CardDescription className="text-gray-600 text-base leading-relaxed">
-                      {feature.description}
-                    </CardDescription>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            {/* Left: Features */}
+            <div className="space-y-8">
+              <div className="flex gap-4">
+                <div className="flex-shrink-0">
+                  <div className="w-12 h-12 bg-[#ed874a] rounded-lg flex items-center justify-center">
+                    <BookOpen className="w-6 h-6 text-white" />
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">Unlimited Course Access</h3>
+                  <p className="text-gray-600 leading-relaxed">
+                    Get lifetime access to all our courses with regular updates and new content added continuously.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <div className="flex-shrink-0">
+                  <div className="w-12 h-12 bg-[#ed874a] rounded-lg flex items-center justify-center">
+                    <Clock className="w-6 h-6 text-white" />
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">Learn at Your Own Pace</h3>
+                  <p className="text-gray-600 leading-relaxed">
+                    Study whenever and wherever you want with our flexible learning platform designed for busy schedules.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <div className="flex-shrink-0">
+                  <div className="w-12 h-12 bg-[#ed874a] rounded-lg flex items-center justify-center">
+                    <DollarSign className="w-6 h-6 text-white" />
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">Earn While You Learn</h3>
+                  <p className="text-gray-600 leading-relaxed">
+                    Join our affiliate program and start earning commissions while building your digital skills.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Image */}
+            <div className="relative">
+              <div className="relative rounded-2xl overflow-hidden shadow-2xl">
+                <img 
+                  src="/whychooseus.png" 
+                  alt="Why Choose DigiAfriq - Students learning digital skills"
+                  className="w-full h-auto object-cover"
+                />
+              </div>
+              {/* Decorative elements */}
+              <div className="absolute -bottom-6 -left-6 w-24 h-24 bg-[#ed874a]/20 rounded-full blur-2xl"></div>
+              <div className="absolute -top-6 -right-6 w-32 h-32 bg-[#ed874a]/10 rounded-full blur-3xl"></div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Popular Courses Section */}
-      <section className="py-20 bg-gray-50">
+      <section className="py-20 relative z-10">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl mb-4">
@@ -205,7 +353,7 @@ export default function Home() {
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
               >
-                <Card className="h-full hover:shadow-lg transition-shadow duration-300 border-0 shadow-md overflow-hidden">
+                <Card className="h-full hover:shadow-lg transition-shadow duration-300 border-0 shadow-md overflow-hidden bg-transparent border border-gray-200">
                   {/* Course Image */}
                   <div className="relative h-48 overflow-hidden">
                     <img 
@@ -270,202 +418,284 @@ export default function Home() {
       </section>
 
       {/* Pricing Section */}
-      <section className="py-20 bg-gradient-to-br from-gray-50 to-white">
-        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl mb-4">
-              Simple, Affordable Pricing
+      <section id="pricing" className="py-16 relative z-10">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-12">
+            <h2 className="text-3xl font-bold text-gray-900 mb-3">
+              Choose Your Plan
             </h2>
-            <p className="text-lg text-gray-600">
-              Quality education shouldn&apos;t break the bank. Get unlimited access to everything.
+            <p className="text-base text-gray-600">
+              Select the package that best fits your goals. Both plans include lifetime access and regular updates.
             </p>
           </div>
 
-          <div className="flex justify-center">
-            {/* Main Access Plan */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="w-full max-w-md"
-            >
-              <Card className="relative border-2 border-[#ed874a] shadow-xl">
-                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                  <span className="bg-[#ed874a] text-white px-4 py-1 rounded-full text-sm font-semibold">
-                    Most Popular
-                  </span>
-                </div>
-                <CardHeader className="text-center pt-8">
-                  <CardTitle className="text-2xl font-bold">Full Access Plan</CardTitle>
-                  <div className="mt-4">
-                    <span className="text-4xl font-bold text-[#ed874a]">100</span>
-                    <span className="text-xl text-gray-600 ml-1">cedis</span>
-                    <div className="text-sm text-gray-500 mt-1">per year</div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Learner Package */}
+            <Card className="relative overflow-hidden transition-all bg-transparent border border-gray-200 p-6 hover:shadow-lg">
+              {/* Status Bar */}
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#ed874a] to-[#ed874a]/50" />
+
+              <CardHeader className="p-0 space-y-2">
+                <CardTitle className="text-2xl font-bold">Learner Package</CardTitle>
+                <CardDescription className="text-sm text-gray-600">
+                  Perfect for individuals looking to build digital skills
+                </CardDescription>
+              </CardHeader>
+
+              <CardContent className="p-0 mt-6 space-y-6">
+                {/* Price Section */}
+                <div className="space-y-2">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-4xl font-bold">100</span>
+                    <span className="text-muted-foreground">cedis/year</span>
                   </div>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  <ul className="space-y-3 mb-8">
-                    {[
-                      "Unlimited access to all courses",
-                      "New courses added monthly",
-                      "Community support access",
-                      "Mobile app access",
-                      "Certificate of completion",
-                      "Lifetime course updates"
-                    ].map((feature, index) => (
-                      <li key={index} className="flex items-center">
-                        <CheckCircle className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
-                        <span className="text-gray-700">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <Button className="w-full bg-[#ed874a] hover:bg-[#d76f32] text-white font-semibold py-3" asChild>
-                    <Link href="/signup">Get Started Now</Link>
-                  </Button>
-                </CardContent>
-              </Card>
-            </motion.div>
+                  <p className="text-sm text-muted-foreground">
+                    Lifetime access to all courses
+                  </p>
+                </div>
+
+                {/* Features List */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <Check className="h-5 w-5 text-[#ed874a] shrink-0" />
+                    <span className="text-sm text-gray-700">Access to all courses</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Check className="h-5 w-5 text-[#ed874a] shrink-0" />
+                    <span className="text-sm text-gray-700">Learn at your own pace</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Check className="h-5 w-5 text-[#ed874a] shrink-0" />
+                    <span className="text-sm text-gray-700">Community support</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Check className="h-5 w-5 text-[#ed874a] shrink-0" />
+                    <span className="text-sm text-gray-700">In-Demand Digital Skills</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Check className="h-5 w-5 text-[#ed874a] shrink-0" />
+                    <span className="text-sm text-gray-700">Continuous Growth</span>
+                  </div>
+                </div>
+              </CardContent>
+
+              <CardFooter className="p-0 mt-6">
+                <Button className="w-full py-6 text-lg bg-[#ed874a] hover:bg-[#ed874a]/90 text-white" asChild>
+                  <Link href="/signup">Get Started</Link>
+                </Button>
+              </CardFooter>
+            </Card>
+
+            {/* Digital Cashflow System Package */}
+            <Card className="relative overflow-hidden transition-all bg-transparent border border-gray-200 p-6 hover:shadow-lg ring-2 ring-[#ed874a]">
+              {/* Status Bar */}
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#ed874a] to-[#ed874a]/50" />
+              
+              {/* Popular Badge */}
+              <div className="absolute top-2 right-6 z-20">
+                <span className="bg-[#ed874a] text-white px-4 py-2 text-sm font-bold uppercase tracking-wide shadow-lg">
+                  Popular
+                </span>
+              </div>
+
+              <CardHeader className="p-0 space-y-2">
+                <CardTitle className="text-2xl font-bold">Digital Cashflow System</CardTitle>
+                <CardDescription className="text-sm text-gray-600">
+                  Learn and earn with our complete affiliate system
+                </CardDescription>
+              </CardHeader>
+
+              <CardContent className="p-0 mt-6 space-y-6">
+                {/* Price Section */}
+                <div className="space-y-2">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-4xl font-bold">180</span>
+                    <span className="text-muted-foreground">cedis/year</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Everything in Learner Package + affiliate features
+                  </p>
+                </div>
+
+                {/* Features List */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <Check className="h-5 w-5 text-[#ed874a] shrink-0" />
+                    <span className="text-sm text-gray-700">Everything in Learner Package</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Check className="h-5 w-5 text-[#ed874a] shrink-0" />
+                    <span className="text-sm text-gray-700">Affiliate dashboard access</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Check className="h-5 w-5 text-[#ed874a] shrink-0" />
+                    <span className="text-sm text-gray-700">Earn 80% commission on learner package</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Check className="h-5 w-5 text-[#ed874a] shrink-0" />
+                    <span className="text-sm text-gray-700">20% yearly recurring commission eligibility</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Check className="h-5 w-5 text-[#ed874a] shrink-0" />
+                    <span className="text-sm text-gray-700">Marketing materials provided</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Check className="h-5 w-5 text-[#ed874a] shrink-0" />
+                    <span className="text-sm text-gray-700">Real-time earnings tracking</span>
+                  </div>
+                </div>
+              </CardContent>
+
+              <CardFooter className="p-0 mt-6">
+                <Button className="w-full py-6 text-lg bg-[#ed874a] hover:bg-[#ed874a]/90 text-white" asChild>
+                  <Link href="/signup">Get Started</Link>
+                </Button>
+              </CardFooter>
+            </Card>
           </div>
         </div>
       </section>
 
-      {/* Affiliate Opportunity Section */}
-      <section className="py-20 bg-gradient-to-r from-[#ed874a]/5 to-[#d76f32]/5">
+      {/* Affiliate Program Section */}
+      <section className="py-20 relative z-10">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl mb-4">
-              Our Affiliate Program
+              Partner With DigiAfriq
             </h2>
             <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-              Join our affiliate program and turn your learning journey into a profitable venture. Help others discover DigiAfriq while earning generous commissions.
+              Join our thriving affiliate community and turn your network into a sustainable income stream. Earn generous commissions while helping others transform their careers.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            {/* Left Column - Benefits */}
-            <div className="space-y-8">
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.6 }}
-              >
-                <div className="flex items-start space-x-4">
-                  <div className="w-12 h-12 bg-[#ed874a] rounded-full flex items-center justify-center flex-shrink-0">
-                    <span className="text-white font-bold text-lg">100₵</span>
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">Earn 100 Cedis Per Sale</h3>
-                    <p className="text-gray-600">Keep 100%  of your commissions with no hidden fees or deductions for the first year. Every successful learner puts 100 cedis directly in your pocket.</p>
-                  </div>
-                </div>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.6, delay: 0.1 }}
-              >
-                <div className="flex items-start space-x-4">
-                  <div className="w-12 h-12 bg-[#ed874a] rounded-full flex items-center justify-center flex-shrink-0">
-                    <Users className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">No Sales Targets</h3>
-                    <p className="text-gray-600">Work at your own pace with no pressure. Whether you share the opportunity with 1 person or 100, you earn the same generous commission rate.</p>
-                  </div>
-                </div>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.6, delay: 0.2 }}
-              >
-                <div className="flex items-start space-x-4">
-                  <div className="w-12 h-12 bg-[#ed874a] rounded-full flex items-center justify-center flex-shrink-0">
-                    <Zap className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">Marketing Support</h3>
-                    <p className="text-gray-600">Get access to professional marketing materials, social media content, and proven strategies to maximize your success.</p>
-                  </div>
-                </div>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.6, delay: 0.3 }}
-              >
-                <div className="flex items-start space-x-4">
-                  <div className="w-12 h-12 bg-[#ed874a] rounded-full flex items-center justify-center flex-shrink-0">
-                    <Target className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">Real-Time Tracking</h3>
-                    <p className="text-gray-600">Monitor your referrals, track your earnings, and get paid promptly with our transparent affiliate dashboard.</p>
-                  </div>
-                </div>
-              </motion.div>
-            </div>
-
-            {/* Right Column - CTA Card */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+            {/* Left Column - Partner Image with Stats */}
             <motion.div
-              initial={{ opacity: 0, x: 20 }}
+              initial={{ opacity: 0, x: -20 }}
               whileInView={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6 }}
-              className="lg:pl-8"
+              transition={{ duration: 0.8 }}
+              className="relative"
             >
-              <Card className="border-2 border-[#ed874a]/20 shadow-xl bg-white">
-                <CardHeader className="text-center pb-6">
-                  <div className="w-20 h-20 bg-gradient-to-br from-[#ed874a] to-[#d76f32] rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Award className="w-10 h-10 text-white" />
-                  </div>
-                  <CardTitle className="text-2xl font-bold mb-2">Start Earning Today</CardTitle>
-                  <CardDescription className="text-gray-600 text-base">
-                    Join thousands of successful affiliates across Africa who are earning while helping others learn digital skills.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="text-center">
-                  <div className="bg-[#ed874a]/10 rounded-lg p-6 mb-6">
-                    <div className="text-3xl font-bold text-[#ed874a] mb-2">Potential Monthly Earnings</div>
-                    <div className="space-y-2 text-sm text-gray-600">
-                      <div className="flex justify-between">
-                        <span>5 sales/month:</span>
-                        <span className="font-semibold">500 cedis</span>
+              <div className="relative rounded-3xl overflow-hidden shadow-2xl">
+                <img 
+                  src="/partner.jpg" 
+                  alt="DigiAfriq Affiliate Partners - Success and Growth"
+                  className="w-full h-auto object-cover"
+                />
+                {/* Overlay with Stats */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex items-end">
+                  <div className="p-8 w-full">
+                    <div className="grid grid-cols-3 gap-4 text-white">
+                      <div className="text-center">
+                        <div className="text-3xl font-bold mb-1">1000+</div>
+                        <div className="text-sm opacity-90">Active Partners</div>
                       </div>
-                      <div className="flex justify-between">
-                        <span>10 sales/month:</span>
-                        <span className="font-semibold">1000 cedis</span>
+                      <div className="text-center">
+                        <div className="text-3xl font-bold mb-1">80%</div>
+                        <div className="text-sm opacity-90">commission</div>
                       </div>
-                      <div className="flex justify-between border-t pt-2">
-                        <span>20 sales/month:</span>
-                        <span className="font-bold text-[#ed874a]">2,000 cedis</span>
+                      <div className="text-center">
+                        <div className="text-3xl font-bold mb-1">95%</div>
+                        <div className="text-sm opacity-90">Success Rate</div>
                       </div>
                     </div>
                   </div>
-                  <Button 
-                    size="lg" 
-                    className="w-full bg-[#ed874a] hover:bg-[#d76f32] text-white font-semibold py-3 mb-4"
-                    asChild
-                  >
-                    <Link href="/affiliate">
-                      Join Affiliate Program
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </Link>
-                  </Button>
-                  <p className="text-xs text-gray-500">
-                    One-time setup fee applies. Start earning immediately after approval.
-                  </p>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
+              {/* Floating Decorative Elements */}
+              <motion.div
+                animate={{
+                  y: [0, -20, 0],
+                  rotate: [0, 5, 0]
+                }}
+                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                className="absolute -top-6 -right-6 w-16 h-16 bg-[#ed874a]/20 rounded-2xl blur-xl"
+              />
+              <motion.div
+                animate={{
+                  y: [0, 20, 0],
+                  rotate: [0, -5, 0]
+                }}
+                transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                className="absolute -bottom-6 -left-6 w-20 h-20 bg-[#d76f32]/20 rounded-full blur-xl"
+              />
             </motion.div>
+
+            {/* Right Column - Benefits & CTA */}
+            <div className="space-y-8">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+              >
+                <div className="flex items-start space-x-4">
+                  <div className="w-14 h-14 bg-gradient-to-br from-[#ed874a] to-[#d76f32] rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
+                    <DollarSign className="w-7 h-7 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">Generous Commissions</h3>
+                    <p className="text-gray-600 leading-relaxed">Earn 100 cedis for every successful referral. Keep 80% of your commissions with no hidden fees or deductions.</p>
+                  </div>
+                </div>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.1 }}
+              >
+                <div className="flex items-start space-x-4">
+                  <div className="w-14 h-14 bg-gradient-to-br from-[#ed874a] to-[#d76f32] rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
+                    <Zap className="w-7 h-7 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">Marketing Resources</h3>
+                    <p className="text-gray-600 leading-relaxed">Get access to professional marketing materials, social media content, and proven strategies to maximize your success.</p>
+                  </div>
+                </div>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+              >
+                <div className="flex items-start space-x-4">
+                  <div className="w-14 h-14 bg-gradient-to-br from-[#ed874a] to-[#d76f32] rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
+                    <Target className="w-7 h-7 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">Real-Time Analytics</h3>
+                    <p className="text-gray-600 leading-relaxed">Monitor your referrals, track your earnings, and get paid promptly with our transparent affiliate dashboard.</p>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* CTA Section */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.3 }}
+                className="text-center"
+              >
+                <Button 
+                  size="lg" 
+                  className="bg-gradient-to-r from-[#ed874a] to-[#d76f32] hover:from-[#d76f32] hover:to-[#ed874a] text-white font-bold py-4 px-8 shadow-lg transform hover:scale-105 transition-all duration-300"
+                  asChild
+                >
+                  <Link href="/join/dcs-affiliate">
+                    Become a Partner
+                    <ArrowRight className="w-5 h-5 ml-2" />
+                  </Link>
+                </Button>
+              </motion.div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Testimonials Section */}
-      <section className="py-20 bg-white">
+      <section className="py-20 relative z-10">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl mb-4">
@@ -484,7 +714,7 @@ export default function Home() {
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
               >
-                <Card className="h-full shadow-lg border-0">
+                <Card className="h-full shadow-lg border-0 bg-transparent border border-gray-200">
                   <CardHeader className="pb-4">
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex">
@@ -522,7 +752,7 @@ export default function Home() {
       </section>
 
       {/* FAQ Section */}
-      <section className="py-20 bg-white">
+      <section id="faq" className="py-20 relative z-10">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl mb-4">
@@ -561,28 +791,24 @@ export default function Home() {
             <div className="space-y-4">
               {[
                 {
-                  question: "What is DigiAfriq all about?",
-                  answer: "DigiAfriq is Africa's leading digital skills platform that offers comprehensive courses in digital marketing, web development, data analytics, and mobile app development. We provide practical, hands-on training designed specifically for the African market, with an optional affiliate program that lets you earn while you learn."
+                  question: "What is Digiafriq?",
+                  answer: "Digiafriq is an online learning platform built to help Africans learn in-demand digital skills and, if they choose, earn income through our affiliate and reseller opportunities."
                 },
                 {
-                  question: "How am I sure that the courses on DigiAfriq will deliver?",
-                  answer: "Our courses are designed by industry experts with real-world experience. We offer practical projects, lifetime updates, community support, and a 100% satisfaction guarantee. Plus, with over 15,000 active learners and a 95% success rate, our track record speaks for itself."
+                  question: "Who is Digiafriq for?",
+                  answer: "Digiafriq is for beginners, students, professionals, entrepreneurs, and anyone who wants to learn practical digital skills and explore online income opportunities. No prior experience is required."
                 },
                 {
-                  question: "How is commission shared in the affiliate program?",
-                  answer: "As an affiliate, you keep 100% of your commissions with no hidden fees or deductions for the first year. You earn 100 cedis for every successful referral. We provide real-time tracking, marketing materials, and dedicated support to help you succeed."
+                  question: "How does learning work on Digiafriq?",
+                  answer: "Once you join Digiafriq, you get instant access to a growing library of quality courses. You can learn at your own pace, on any device, anytime."
                 },
                 {
-                  question: "Can I access courses on mobile devices?",
-                  answer: "Yes! All our courses are fully optimized for mobile devices. You can learn on-the-go using your smartphone or tablet, with offline download options available for uninterrupted learning even without internet connection."
+                  question: "Can I earn money on Digiafriq?",
+                  answer: "Yes. Digiafriq offers an optional affiliate and reseller program that allows members to earn commissions by promoting Digiafriq products. Learning comes first — earning is an added opportunity."
                 },
                 {
-                  question: "What support do I get as a learner?",
-                  answer: "You get access to our vibrant community of learners, direct support from instructors, regular live Q&A sessions, and lifetime updates to course content. Our support team is available to help you succeed throughout your learning journey."
-                },
-                {
-                  question: "How quickly can I start earning as an affiliate?",
-                  answer: "Once approved (usually within 24-48 hours), you can start earning immediately. We provide you with marketing materials, your unique referral links, and access to our affiliate dashboard to track your progress and earnings in real-time."
+                  question: "Do you issue certificates after course completion?",
+                  answer: "No. At the moment, Digiafriq does not issue certificates. Our focus is on practical skills, real knowledge, and hands-on learning that you can apply immediately."
                 }
               ].map((faq, index) => (
                 <motion.div
@@ -633,7 +859,7 @@ export default function Home() {
       </section>
 
       {/* Latest Blog Section */}
-      <section className="py-20 bg-gray-50">
+      <section id="blog" className="py-20 relative z-10">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl mb-4">

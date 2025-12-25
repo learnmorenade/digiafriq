@@ -385,31 +385,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const getInitialSession = async () => {
       console.log('🔄 Getting initial session...')
       
-      const { data: { session } } = await supabase.auth.getSession()
-      
-      console.log('📊 Initial session check:', {
-        hasSession: !!session,
-        hasUser: !!session?.user,
-        userId: session?.user?.id,
-        userEmail: session?.user?.email,
-        emailConfirmed: session?.user?.email_confirmed_at
-      })
-      
-      if (session) {
-        setSession(session)
-        setUser(session.user)
+      try {
+        // Add timeout to prevent infinite loading
+        const sessionPromise = supabase.auth.getSession()
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Session timeout')), 5000) // 5 second timeout
+        )
         
-        console.log('👤 Initial session found, fetching/creating profile...')
+        const result = await Promise.race([sessionPromise, timeoutPromise]) as any
+        const { data: { session } } = result
         
-        // Fetch or create profile
-        let profileData = await fetchProfile(session.user.id)
-        if (!profileData) {
-          console.log('🎆 No profile found during initial load, creating one...')
-          profileData = await createProfile(session.user)
+        if (session) {
+          console.log('✅ Initial session found:', session.user.id)
+          setSession(session)
+          setUser(session.user)
+          
+          console.log('👤 Initial session found, fetching/creating profile...')
+          
+          // Fetch or create profile
+          let profileData = await fetchProfile(session.user.id)
+          if (!profileData) {
+            console.log('🎆 No profile found during initial load, creating one...')
+            profileData = await createProfile(session.user)
+          }
+          setProfile(profileData)
+        } else {
+          console.log('🚪 No initial session found')
         }
-        setProfile(profileData)
-      } else {
-        console.log('🚪 No initial session found')
+      } catch (error) {
+        if (error instanceof Error && error.message === 'Session timeout') {
+          console.warn('⏰ Session check timed out after 5 seconds - continuing without session')
+        } else {
+          console.error('❌ Error getting initial session:', error)
+        }
+        console.log('🔄 Continuing without session - user can access login page')
+        // Continue without session - user can still access login page
       }
       
       setLoading(false)
