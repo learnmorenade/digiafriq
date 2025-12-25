@@ -139,7 +139,7 @@ export default function Home() {
                   className="group border-2 border-[#ed874a] text-[#ed874a] hover:bg-[#fef3e8] px-8 py-6 rounded-xl font-semibold text-base transition-all duration-300 hover:border-[#d76f32] hover:shadow-lg"
                   asChild
                 >
-                  <Link href="/join/dcs-affiliate" className="flex items-center justify-center">
+                  <Link href="/signup" className="flex items-center justify-center">
                     <span>Join as affiliate</span>
                     <Users className="w-5 h-5 ml-2 group-hover:rotate-12 transition-transform" />
                   </Link>
@@ -683,7 +683,7 @@ export default function Home() {
                   className="bg-gradient-to-r from-[#ed874a] to-[#d76f32] hover:from-[#d76f32] hover:to-[#ed874a] text-white font-bold py-4 px-8 shadow-lg transform hover:scale-105 transition-all duration-300"
                   asChild
                 >
-                  <Link href="/join/dcs-affiliate">
+                  <Link href="/signup">
                     Become a Partner
                     <ArrowRight className="w-5 h-5 ml-2" />
                   </Link>

@@ -12,7 +12,7 @@ const navigation = [
   { name: "Pricing", href: "/#pricing" },
   { name: "FAQ", href: "/#faq" },
   { name: "Blog", href: "/#blog" },
-  { name: "Affiliate Network", href: "/join/dcs-affiliate" },
+  // { name: "Affiliate Network", href: "/join/dcs-affiliate" },
   { name: "Contact Us", href: "/contact" },
 ]
 

@@ -219,7 +219,7 @@ export default function PricingPage() {
                     className="w-full bg-gradient-to-r from-[#ed874a] to-[#d76f32] hover:from-[#d76f32] hover:to-[#ed874a] text-white font-semibold py-3 text-lg"
                     asChild
                   >
-                    <Link href="/affiliate">
+                    <Link href="/signup">
                       Join as Affiliate
                     </Link>
                   </Button>
